@@ -1,0 +1,20 @@
+{
+  "name": "nabiz",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nabız: depo ekipmanı için TPM uygulaması. QR ile vardiya başı otonom bakım kontrolü, kırmızı/beyaz etiket, Pusula'ya iş, Arıza Defteri'ne arıza (web + MCP).",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "start:dev": "DATA_DIR=./tmp/data APP_URL=http://localhost:8081/ PORT=8081 node --disable-warning=ExperimentalWarning server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-timeout=60000 tests/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "qrcode": "^1.5.4",
+    "zod": "^4.6.7"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

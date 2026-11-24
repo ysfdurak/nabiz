@@ -1,0 +1,36 @@
+# ysfdurak.com ortak altyapısında çalıştırma.
+#   cd deploy && sudo docker compose -f docker-compose.ortak.yml up -d --build
+# Nabız hiçbir portu dışarı açmaz; ortak Caddy "web" ağı üzerinden nabiz:8080'e ulaşır.
+# Arıza Defteri'ne (http://ariza-defteri:8080) ve Pusula'ya (http://pusula:8080/mcp) aynı ağdan, internete çıkmadan bağlanır.
+name: nabiz
+services:
+  nabiz:
+    build: ..
+    container_name: nabiz
+    env_file: ../.env
+    volumes:
+      - nabiz-data:/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 320m
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+
+volumes:
+  nabiz-data: {}

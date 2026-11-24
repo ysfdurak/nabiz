@@ -1,0 +1,35 @@
+name: Testler
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Bağımlılıkları kur (kilit dosyasına sadık)
+        run: npm ci
+      - name: Testler (kurallar, giden kutusu, Pusula istemcisi, API, MCP)
+        run: npm test
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Playwright kur
+        run: pip install playwright==1.*
+      - name: Tarayıcı duman testi (Chrome)
+        run: |
+          npm run start:dev > sunucu.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://localhost:8081/healthz && break; sleep 1; done
+          python3 tests/tarayici/duman_test.py "$(which google-chrome)" http://localhost:8081/

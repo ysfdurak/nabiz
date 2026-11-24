@@ -1,0 +1,660 @@
+{
+ "ekipmanlar": [
+  {
+   "kod": "FL-01",
+   "tip": "forklift",
+   "ad": "Forklift 1",
+   "bolge": "Mal kabul",
+   "devreye": "2017-03-01",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "FL-02",
+   "tip": "forklift",
+   "ad": "Forklift 2",
+   "bolge": "Mal kabul",
+   "devreye": "2018-06-15",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "FL-03",
+   "tip": "forklift",
+   "ad": "Forklift 3",
+   "bolge": "Mal kabul",
+   "devreye": "2021-02-01",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "FL-04",
+   "tip": "forklift",
+   "ad": "Forklift 4",
+   "bolge": "Sevkiyat",
+   "devreye": "2019-09-10",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "FL-05",
+   "tip": "forklift",
+   "ad": "Forklift 5",
+   "bolge": "Sevkiyat",
+   "devreye": "2022-04-01",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "FL-06",
+   "tip": "forklift",
+   "ad": "Forklift 6",
+   "bolge": "Sevkiyat",
+   "devreye": "2023-11-20",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "FL-07",
+   "tip": "forklift",
+   "ad": "Forklift 7",
+   "bolge": "Ana depo",
+   "devreye": "2016-08-01",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "FL-08",
+   "tip": "forklift",
+   "ad": "Forklift 8",
+   "bolge": "Ana depo",
+   "devreye": "2024-05-06",
+   "tipAd": "Forklift"
+  },
+  {
+   "kod": "RT-01",
+   "tip": "reach_truck",
+   "ad": "Reach truck 1",
+   "bolge": "Yüksek raf",
+   "devreye": "2019-01-15",
+   "tipAd": "Reach truck"
+  },
+  {
+   "kod": "RT-02",
+   "tip": "reach_truck",
+   "ad": "Reach truck 2",
+   "bolge": "Yüksek raf",
+   "devreye": "2020-07-01",
+   "tipAd": "Reach truck"
+  },
+  {
+   "kod": "RT-03",
+   "tip": "reach_truck",
+   "ad": "Reach truck 3",
+   "bolge": "Yüksek raf",
+   "devreye": "2018-03-12",
+   "tipAd": "Reach truck"
+  },
+  {
+   "kod": "RT-04",
+   "tip": "reach_truck",
+   "ad": "Reach truck 4",
+   "bolge": "Yüksek raf",
+   "devreye": "2023-02-01",
+   "tipAd": "Reach truck"
+  },
+  {
+   "kod": "KV-01",
+   "tip": "konveyor",
+   "ad": "Konveyör hattı 1 (mal kabul)",
+   "bolge": "Mal kabul",
+   "devreye": "2018-01-10",
+   "tipAd": "Konveyör hattı"
+  },
+  {
+   "kod": "KV-02",
+   "tip": "konveyor",
+   "ad": "Konveyör hattı 2 (toplama)",
+   "bolge": "Ana depo",
+   "devreye": "2018-01-10",
+   "tipAd": "Konveyör hattı"
+  },
+  {
+   "kod": "KV-03",
+   "tip": "konveyor",
+   "ad": "Konveyör hattı 3 (sevkiyat)",
+   "bolge": "Sevkiyat",
+   "devreye": "2022-09-01",
+   "tipAd": "Konveyör hattı"
+  },
+  {
+   "kod": "SR-01",
+   "tip": "sorter",
+   "ad": "Sorter",
+   "bolge": "Sevkiyat",
+   "devreye": "2021-10-01",
+   "tipAd": "Sorter"
+  },
+  {
+   "kod": "ST-01",
+   "tip": "strec",
+   "ad": "Streç makinesi 1",
+   "bolge": "Sevkiyat",
+   "devreye": "2020-02-01",
+   "tipAd": "Streç makinesi"
+  },
+  {
+   "kod": "ST-02",
+   "tip": "strec",
+   "ad": "Streç makinesi 2",
+   "bolge": "Sevkiyat",
+   "devreye": "2024-01-15",
+   "tipAd": "Streç makinesi"
+  }
+ ],
+ "arizaTurleri": [
+  {
+   "kod": "FL-AKU",
+   "operator": true,
+   "tip": "forklift",
+   "ad": "Akü şarjı bitti / bağlantı gevşek",
+   "kayip": "kucuk_durus",
+   "mttr": 15,
+   "uzmanlik": "aku",
+   "onem": "dusuk",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "FL-HID",
+   "tip": "forklift",
+   "ad": "Hidrolik kaçak",
+   "kayip": "ariza",
+   "mttr": 75,
+   "uzmanlik": "hidrolik",
+   "onem": "yuksek",
+   "kayipAd": "Ekipman arızası"
+  },
+  {
+   "kod": "FL-LAS",
+   "tip": "forklift",
+   "ad": "Lastik hasarı",
+   "kayip": "ariza",
+   "mttr": 60,
+   "uzmanlik": "mekanik",
+   "onem": "orta",
+   "kayipAd": "Ekipman arızası"
+  },
+  {
+   "kod": "FL-FRN",
+   "tip": "forklift",
+   "ad": "Fren ayarı bozuk",
+   "kayip": "ayar",
+   "mttr": 35,
+   "uzmanlik": "mekanik",
+   "onem": "yuksek",
+   "kayipAd": "Kurulum ve ayar"
+  },
+  {
+   "kod": "FL-SNS",
+   "tip": "forklift",
+   "ad": "Uyarı ışığı / sensör hatası",
+   "kayip": "kucuk_durus",
+   "mttr": 20,
+   "uzmanlik": "elektrik",
+   "onem": "dusuk",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "FL-CAT",
+   "tip": "forklift",
+   "ad": "Çatal hasarı / yükte hasar",
+   "kayip": "kalite",
+   "mttr": 45,
+   "uzmanlik": "mekanik",
+   "onem": "orta",
+   "kayipAd": "Hata ve hasar"
+  },
+  {
+   "kod": "RT-HID",
+   "tip": "reach_truck",
+   "ad": "Hidrolik kaçak / basınç düşük",
+   "kayip": "ariza",
+   "mttr": 90,
+   "uzmanlik": "hidrolik",
+   "onem": "yuksek",
+   "kayipAd": "Ekipman arızası"
+  },
+  {
+   "kod": "RT-AKU",
+   "operator": true,
+   "tip": "reach_truck",
+   "ad": "Akü şarjı bitti / bağlantı gevşek",
+   "kayip": "kucuk_durus",
+   "mttr": 15,
+   "uzmanlik": "aku",
+   "onem": "dusuk",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "RT-MAS",
+   "tip": "reach_truck",
+   "ad": "Direk zinciri / kaldırma sorunu",
+   "kayip": "ariza",
+   "mttr": 120,
+   "uzmanlik": "mekanik",
+   "onem": "yuksek",
+   "kayipAd": "Ekipman arızası"
+  },
+  {
+   "kod": "RT-SNS",
+   "tip": "reach_truck",
+   "ad": "Yükseklik sensörü hatası",
+   "kayip": "kucuk_durus",
+   "mttr": 25,
+   "uzmanlik": "elektrik",
+   "onem": "orta",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "RT-AYR",
+   "tip": "reach_truck",
+   "ad": "Kaldırma yüksekliği ayarı",
+   "kayip": "ayar",
+   "mttr": 30,
+   "uzmanlik": "elektrik",
+   "onem": "dusuk",
+   "kayipAd": "Kurulum ve ayar"
+  },
+  {
+   "kod": "KV-BNT",
+   "tip": "konveyor",
+   "ad": "Bant kayması",
+   "kayip": "kucuk_durus",
+   "mttr": 20,
+   "uzmanlik": "mekanik",
+   "onem": "dusuk",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "KV-SIK",
+   "operator": true,
+   "tip": "konveyor",
+   "ad": "Koli sıkışması",
+   "kayip": "kucuk_durus",
+   "mttr": 8,
+   "uzmanlik": "mekanik",
+   "onem": "dusuk",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "KV-FTS",
+   "tip": "konveyor",
+   "ad": "Fotosel arızası",
+   "kayip": "kucuk_durus",
+   "mttr": 25,
+   "uzmanlik": "elektrik",
+   "onem": "orta",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "KV-MTR",
+   "tip": "konveyor",
+   "ad": "Motor / redüktör arızası",
+   "kayip": "ariza",
+   "mttr": 150,
+   "uzmanlik": "elektrik",
+   "onem": "yuksek",
+   "kayipAd": "Ekipman arızası"
+  },
+  {
+   "kod": "KV-HIZ",
+   "tip": "konveyor",
+   "ad": "Hat yavaş çalışıyor",
+   "kayip": "hiz",
+   "mttr": 40,
+   "uzmanlik": "elektrik",
+   "onem": "orta",
+   "kayipAd": "Hız düşüklüğü"
+  },
+  {
+   "kod": "SR-OKU",
+   "tip": "sorter",
+   "ad": "Barkod okuyucu hatası (yanlış oluk)",
+   "kayip": "kalite",
+   "mttr": 25,
+   "uzmanlik": "sorter",
+   "onem": "orta",
+   "kayipAd": "Hata ve hasar"
+  },
+  {
+   "kod": "SR-SIK",
+   "operator": true,
+   "tip": "sorter",
+   "ad": "Sıkışma",
+   "kayip": "kucuk_durus",
+   "mttr": 12,
+   "uzmanlik": "sorter",
+   "onem": "dusuk",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "SR-TRY",
+   "tip": "sorter",
+   "ad": "Tray / klape arızası",
+   "kayip": "ariza",
+   "mttr": 70,
+   "uzmanlik": "sorter",
+   "onem": "yuksek",
+   "kayipAd": "Ekipman arızası"
+  },
+  {
+   "kod": "SR-PLC",
+   "tip": "sorter",
+   "ad": "PLC / yazılım hatası",
+   "kayip": "ariza",
+   "mttr": 90,
+   "uzmanlik": "sorter",
+   "onem": "yuksek",
+   "kayipAd": "Ekipman arızası"
+  },
+  {
+   "kod": "SR-ACL",
+   "tip": "sorter",
+   "ad": "Açılışta ısınma / test turu uzun sürdü",
+   "kayip": "baslangic",
+   "mttr": 20,
+   "uzmanlik": "sorter",
+   "onem": "dusuk",
+   "kayipAd": "Başlangıç kayıpları"
+  },
+  {
+   "kod": "ST-FLM",
+   "operator": true,
+   "tip": "strec",
+   "ad": "Film kopması",
+   "kayip": "kucuk_durus",
+   "mttr": 6,
+   "uzmanlik": "mekanik",
+   "onem": "dusuk",
+   "kayipAd": "Küçük duruşlar"
+  },
+  {
+   "kod": "ST-AYR",
+   "tip": "strec",
+   "ad": "Gerginlik ayarı bozuk",
+   "kayip": "ayar",
+   "mttr": 20,
+   "uzmanlik": "mekanik",
+   "onem": "dusuk",
+   "kayipAd": "Kurulum ve ayar"
+  },
+  {
+   "kod": "ST-MTR",
+   "tip": "strec",
+   "ad": "Döner tabla motoru arızası",
+   "kayip": "ariza",
+   "mttr": 110,
+   "uzmanlik": "elektrik",
+   "onem": "orta",
+   "kayipAd": "Ekipman arızası"
+  }
+ ],
+ "kisiler": [
+  {
+   "kod": "K-MKAYA",
+   "ad": "Murat Kaya",
+   "rol": "teknisyen",
+   "vardiya": 1,
+   "uzmanlik": {
+    "sorter": 1,
+    "elektrik": 0.9,
+    "mekanik": 0.5
+   }
+  },
+  {
+   "kod": "K-SAYDIN",
+   "ad": "Serkan Aydın",
+   "rol": "teknisyen",
+   "vardiya": 1,
+   "uzmanlik": {
+    "hidrolik": 1,
+    "mekanik": 0.9,
+    "aku": 0.7
+   }
+  },
+  {
+   "kod": "K-ECELIK",
+   "ad": "Emre Çelik",
+   "rol": "teknisyen",
+   "vardiya": 2,
+   "uzmanlik": {
+    "aku": 1,
+    "elektrik": 0.8,
+    "hidrolik": 0.5,
+    "mekanik": 0.6
+   }
+  },
+  {
+   "kod": "K-HYILDIZ",
+   "ad": "Hakan Yıldız",
+   "rol": "teknisyen",
+   "vardiya": 2,
+   "uzmanlik": {
+    "mekanik": 1,
+    "hidrolik": 0.6,
+    "elektrik": 0.5,
+    "sorter": 0.3
+   }
+  },
+  {
+   "kod": "K-ODEMIR",
+   "ad": "Oğuz Demir",
+   "rol": "teknisyen",
+   "vardiya": 3,
+   "uzmanlik": {
+    "mekanik": 0.8,
+    "elektrik": 0.7,
+    "aku": 0.8,
+    "hidrolik": 0.4,
+    "sorter": 0.2
+   }
+  },
+  {
+   "kod": "K-BSAHIN",
+   "ad": "Burak Şahin",
+   "rol": "teknisyen",
+   "vardiya": 1,
+   "uzmanlik": {
+    "mekanik": 0.6,
+    "aku": 0.6,
+    "elektrik": 0.4
+   }
+  },
+  {
+   "kod": "K-AKOC",
+   "ad": "Ayşe Koç",
+   "rol": "sef",
+   "vardiya": 1,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-TOZTURK",
+   "ad": "Tolga Öztürk",
+   "rol": "sef",
+   "vardiya": 2,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-SARSLAN",
+   "ad": "Selin Arslan",
+   "rol": "sef",
+   "vardiya": 3,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O01",
+   "ad": "Ali Yılmaz",
+   "rol": "operator",
+   "vardiya": 1,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O02",
+   "ad": "Mehmet Kurt",
+   "rol": "operator",
+   "vardiya": 1,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O03",
+   "ad": "Fatma Doğan",
+   "rol": "operator",
+   "vardiya": 1,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O04",
+   "ad": "Kemal Aksoy",
+   "rol": "operator",
+   "vardiya": 1,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O05",
+   "ad": "Zeynep Polat",
+   "rol": "operator",
+   "vardiya": 1,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O06",
+   "ad": "Cem Öz",
+   "rol": "operator",
+   "vardiya": 2,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O07",
+   "ad": "Hüseyin Kılıç",
+   "rol": "operator",
+   "vardiya": 2,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O08",
+   "ad": "Gülay Erdem",
+   "rol": "operator",
+   "vardiya": 2,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O09",
+   "ad": "Volkan Şen",
+   "rol": "operator",
+   "vardiya": 2,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O10",
+   "ad": "Derya Tekin",
+   "rol": "operator",
+   "vardiya": 2,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O11",
+   "ad": "İsmail Uçar",
+   "rol": "operator",
+   "vardiya": 3,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O12",
+   "ad": "Rıza Bulut",
+   "rol": "operator",
+   "vardiya": 3,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O13",
+   "ad": "Sibel Avcı",
+   "rol": "operator",
+   "vardiya": 3,
+   "uzmanlik": {}
+  },
+  {
+   "kod": "K-O14",
+   "ad": "Okan Güler",
+   "rol": "operator",
+   "vardiya": 3,
+   "uzmanlik": {}
+  }
+ ],
+ "kayiplar": {
+  "ariza": "Ekipman arızası",
+  "ayar": "Kurulum ve ayar",
+  "kucuk_durus": "Küçük duruşlar",
+  "hiz": "Hız düşüklüğü",
+  "kalite": "Hata ve hasar",
+  "baslangic": "Başlangıç kayıpları",
+  "planli": "Planlı bakım"
+ },
+ "tipler": {
+  "forklift": {
+   "ad": "Forklift",
+   "vardiyalar": [
+    1,
+    2,
+    3
+   ],
+   "bakimGun": 30
+  },
+  "reach_truck": {
+   "ad": "Reach truck",
+   "vardiyalar": [
+    1,
+    2,
+    3
+   ],
+   "bakimGun": 30
+  },
+  "konveyor": {
+   "ad": "Konveyör hattı",
+   "vardiyalar": [
+    1,
+    2,
+    3
+   ],
+   "bakimGun": 45
+  },
+  "sorter": {
+   "ad": "Sorter",
+   "vardiyalar": [
+    1,
+    2
+   ],
+   "bakimGun": 30
+  },
+  "strec": {
+   "ad": "Streç makinesi",
+   "vardiyalar": [
+    1,
+    2
+   ],
+   "bakimGun": 60
+  }
+ },
+ "vardiyalar": [
+  {
+   "no": 1,
+   "ad": "1. vardiya",
+   "basSaat": 8,
+   "bitSaat": 16
+  },
+  {
+   "no": 2,
+   "ad": "2. vardiya",
+   "basSaat": 16,
+   "bitSaat": 24
+  },
+  {
+   "no": 3,
+   "ad": "3. vardiya",
+   "basSaat": 0,
+   "bitSaat": 8
+  }
+ ]
+}

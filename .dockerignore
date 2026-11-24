@@ -1,0 +1,11 @@
+node_modules
+tmp
+data
+.env
+.env.*
+.git
+.github
+tests
+docs
+tools/tarayici
+*.log

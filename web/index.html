@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <!-- Aynı politika sunucu başlığında da var (frame-ancestors yalnız orada); bu satır dosya başka yerden sunulursa korur. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f3a5f">
+  <title>Nabız · Depo ekipmanı TPM</title>
+  <meta name="description" content="Depo ekipmanı için TPM: QR ile vardiya başı kontrol, kırmızı/beyaz etiket, bakım ekibine iş. Demo veri sentetiktir.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="ust">
+    <a class="marka" href="#/"><img src="favicon.svg" alt="" width="26" height="26"><span>Nabız</span></a>
+    <button type="button" class="kisi-dugme" id="kisi-dugme" aria-haspopup="dialog">Kişi seç</button>
+  </header>
+  <nav class="sekmeler" aria-label="Bölümler">
+    <a href="#/" data-sekme="ekipman">Ekipman</a>
+    <a href="#/etiketler" data-sekme="etiketler">Etiket</a>
+    <a href="#/kayip" data-sekme="kayip">Kayıp</a>
+    <a href="#/analiz" data-sekme="analiz">Analiz</a>
+    <a href="#/ozet" data-sekme="ozet">Özet</a>
+  </nav>
+  <p class="demo-serit gizli" id="demo-serit"></p>
+  <main id="icerik" tabindex="-1"><p class="yukleniyor">Yükleniyor…</p></main>
+  <div class="bildirim gizli" id="bildirim" role="status" aria-live="polite"></div>
+
+  <dialog id="kisi-penceresi" aria-labelledby="kisi-baslik">
+    <form method="dialog" class="pencere">
+      <h2 id="kisi-baslik">Kim olarak çalışıyorsun?</h2>
+      <p class="soluk">Kontrol ve etiket kayıtlarına bu ad yazılır. Kırmızı etiketi yalnız teknisyen ve şef kapatabilir.</p>
+      <div id="kisi-listesi" class="kisi-listesi"></div>
+      <div class="pencere-alt"><button value="kapat" class="ikincil">Kapat</button></div>
+    </form>
+  </dialog>
+
+  <footer class="alt">
+    <p>Nabız, <a href="https://ysfdurak.com" rel="noopener">ysfdurak.com</a> portföy projesidir · Ekipman ve kişiler <a href="https://ariza.ysfdurak.com" rel="noopener">Arıza Defteri</a>'nden · PolyForm Shield 1.0.0 · <a href="https://github.com/ysfdurak/nabiz" rel="noopener">kaynak</a></p>
+    <p id="giris-baglanti" class="gizli"><a href="#/giris">Kurum girişi</a></p>
+  </footer>
+</body>
+</html>
