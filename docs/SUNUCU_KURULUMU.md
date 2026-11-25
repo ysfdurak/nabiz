@@ -11,7 +11,7 @@ Ortak altyapı (VPS, Docker, Caddy, `web` ağı): [ysfdurak.com → sunucu/READM
    ```bash
    bash ~/ysfdurak.com/sunucu/kurulum-nabiz.sh
    ```
-   Betik soru sormaz. `.env`'i üretir: Arıza Defteri'nin yazma anahtarını oradaki `.env`'den alır, site şifresini ve MCP anahtarını rastgele üretir. Son olarak konteyneri kurar ve Caddy'yi yeniden başlatır.
+   Betik soru sormaz. `.env`'i üretir: Arıza Defteri'nin yazma anahtarını oradaki `.env`'den alır; site şifresini, MCP anahtarını ve sabah özeti için ntfy konusunu rastgele üretir. Sonunda abone olunacak konuyu yazar: telefona [ntfy](https://ntfy.sh) uygulamasını kur ve o konuya abone ol. Özet her gün 07:30'dan sonra gelir (`SABAH_OZETI_SAATI`), geciken ya da sorumlusuz etiket yoksa gelmez. Son olarak konteyneri kurar ve Caddy'yi yeniden başlatır.
 3. Kontrol: `https://nabiz.ysfdurak.com` açılmalı. Alt bilgideki "Kurum girişi" ile site şifresini (`grep SITE_SIFRESI ~/nabiz/.env`) girip "ekipman çalışamıyor" işaretli bir kırmızı etiket aç. 30 saniye içinde etiket sayfasındaki gönderim "Gönderildi" olmalı ve [ariza.ysfdurak.com](https://ariza.ysfdurak.com)'da kayıt görünmeli.
 
 ## 2. Nabız Analiz (V2, Python)

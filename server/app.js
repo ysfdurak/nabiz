@@ -22,7 +22,7 @@ const OTURUM_CEREZI = 'nabiz_oturum';
  * @param {ReturnType<import('./store.js').openStore>} o.store
  */
 export function createApp({ config, store, ana, ariza, analiz, log = () => {}, simdi = Date.now }) {
-  const servis = servisOlustur({ store, ana, ariza, analiz, simdi });
+  const servis = servisOlustur({ store, ana, ariza, analiz, appUrl: config.appUrl, simdi });
   const ozet = (v) => createHash('sha256').update(String(v)).digest();
   const mcpAnahtarlari = config.mcpAnahtarlari.map(ozet);
   const sifreOzeti = config.siteSifresi ? ozet(config.siteSifresi) : null;
@@ -184,6 +184,7 @@ export function createApp({ config, store, ana, ariza, analiz, log = () => {}, s
     if (path === '/v1/etiket' && yazma) return json(res, 201, servis.etiketAc(kum, await jsonOku(req)));
     if (path === '/v1/etiket' && !yazma) return json(res, 200, servis.etiketler(kum, q));
     if (path === '/v1/ozet' && !yazma) return json(res, 200, servis.ozet(kum, q));
+    if (path === '/v1/sabah-ozeti' && !yazma) return json(res, 200, servis.sabahOzeti(kum));
     // V2
     if (path === '/v1/durus' && yazma) return json(res, 201, servis.durusKaydet(kum, await jsonOku(req)));
     m = /^\/v1\/durus\/(D-[0-9a-f]{12})(\/bitir)?$/.exec(path);

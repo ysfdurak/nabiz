@@ -151,6 +151,10 @@ test('sorumlu ve hedef tarih: kurallar, atama yetkisi, gecikme, filtreler ve öz
     assert.equal(o.govde.acik.geciken, geciken.govde.etiketler.length);
     assert.equal(o.govde.acik.sorumsuzKirmizi, tum.govde.etiketler.filter((x) => x.renk === 'kirmizi' && !x.sorumlu).length);
     assert.ok(o.govde.sorumluYuku.find((x) => x.kod === 'K-MKAYA').acik >= 1);
+    const so = await a('/v1/sabah-ozeti');
+    assert.equal(so.govde.gonderilecek, true, 'örnek veride geciken var');
+    assert.match(so.govde.baslik, new RegExp(`sabah özeti: ${geciken.govde.etiketler.length} geciken`));
+    assert.equal(so.govde.baglanti, 'https://nabiz.ornek.test/#/etiketler?durum=acik&ek=geciken');
     const kapandi = await a(`/v1/etiket/${e.govde.id}/kapat`, { json: { kisi: 'K-MKAYA', not: 'Klape ayarlandı' } });
     assert.equal(kapandi.durum, 200);
     assert.equal((await a(`/v1/etiket/${e.govde.id}/ata`, { json: { kisi: 'K-AKOC', sorumlu: 'K-SAYDIN' } })).durum, 409, 'kapalı etiket atanmaz');

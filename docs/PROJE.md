@@ -2,7 +2,7 @@
 
 Kodu ben yazmamış olsam da projeyi baştan sona anlatabilmem ve savunabilmem için tutulur. Ortak altyapı (GitHub, Cloudflare, VPS, Docker, Caddy, güvenlik temeli, lisans) burada tekrar anlatılmaz: [ysfdurak.com → docs/](https://github.com/ysfdurak/ysfdurak.com/tree/main/docs). Kardeş servis: [Arıza Defteri → docs/PROJE.md](https://github.com/ysfdurak/ariza-defteri/blob/main/docs/PROJE.md).
 
-Son güncelleme: 25 Kasım 2026 (V2.1: Pusula bağlantısı çıkarıldı, takip Nabız'da).
+Son güncelleme: 25 Kasım 2026 (V2.1: Pusula bağlantısı çıkarıldı, takip Nabız'da; şefin sabah özeti).
 
 ---
 
@@ -75,6 +75,10 @@ V1'de her kırmızı etiket Pusula'da da iş açıyordu. Kurulum aşamasında ş
 - **Asıl ihtiyaç neydi?** Uzun süren arızanın sahibinin ve tarihinin belli olması. Bunun için kaydı başka sisteme taşımak gerekmiyordu, etikete iki alan eklemek yetti.
 - **Ne kaybettik?** Pusula'nın bildirimleri ve panosu. Karşılığında kurulumda bir hizmet hesabı, bir anahtar ve bir hata noktası (MCP çağrısı) gitti.
 - **Kurallar** (`src/cekirdek/kurallar.js`): Kırmızının sorumlusu teknisyen olur, beyazın operatör ya da teknisyen (şef sorumlu yapılmaz, işi dağıtır). Hedef verilmezse duran ekipman 1 gün, kırmızı 3 gün, beyaz 7 gün. Hedef günü içinde kapanan gecikmiş sayılmaz. Atamayı teknisyen ve şef yapar. Hedef geçmişe ve 90 günden ileriye girilemez (yanlış yıl yakalanır).
+- **Şefin sabah özeti:** Her sabah 07:30'dan sonra (Türkiye saati) şefin telefonuna tek bildirim gider: geciken etiketler (en eskisi üstte, en çok 5), sorumlusu olmayan kırmızılar, gecikme kimde birikiyor. Bildirime dokununca "Geciken" listesi açılır. Geciken ekipman duruyorsa bildirim yüksek öncelikli gelir. Sorun yoksa bildirim gitmez (her sabah "sorun yok" gürültü olur, şef bakmamayı öğrenir). Aynı metin Özet ekranında önizleme olarak da görünür; demo ziyaretçisi bildirimi böyle görür.
+  - *İçeride ne oluyor:* `src/cekirdek/sabah-ozeti.js` metni üretir (saf fonksiyon, test edilir). `server/bildirim.js` 5 dakikada bir saate bakar; saati geçtiyse ve `meta` tablosunda bugünün tarihi yoksa önce tarihi yazar, sonra gönderir. Önce yazmasının nedeni: gönderim hata verirse gün içinde tekrar tekrar denenip telefonu doldurmasın.
+  - *Kanal:* ntfy.sh (Diyalog Atölyesi ile aynı). Konu adı rastgele üretilir, adresi bilen okuyabildiği için tahmin edilemez olmalı. HTTP başlıkları ASCII olmak zorunda olduğundan Türkçe başlık gövdeye yazılır.
+  - **Burada bir test daha yapalım:** Kurulumdan sonra ntfy uygulamasıyla konuya abone ol; ertesi sabah bildirimin geldiğini ve dokununca listenin açıldığını gör. Hemen denemek için `.env`'de `SABAH_OZETI_SAATI`'ni birkaç dakika sonraya al ve betiği yeniden çalıştır (o gün henüz gönderilmediyse gider).
 - **Beyaz etiketler için sonraki adım:** İyileştirme önerisi niteliğindeki beyazlar İvme'ye (kaizen) gidebilir. Bu Pusula'dan daha doğal bir eşleşme; karar V3'te.
 
 ### V2: kayıp, OEE, güvenilirlik, A3
@@ -115,6 +119,8 @@ flowchart LR
 | `src/cekirdek/ornek.js` | Demo için 7 günlük tohumlu geçmiş (gece vardiyası daha az uyumlu, RT-03 cuma hidrolik, sorter kırmızıları Murat Kaya'da) | Atama ayrı üreteçte: eklenince eski örnek veri değişmedi |
 | `server/store.js` | Alanlar, kontroller, etiketler, fotoğraf, giden kutusu, sayaçlar, oturumlar | Alan silinince içindekiler `ON DELETE CASCADE` ile gider |
 | `server/servis.js` | Bütün kurallar: doğrulama, yetki, sınır, kuyruğa yazma, atama, özet (geciken, sorumlu başına yük) | `kuyruk()`: alan `ana` değilse ya da bağlantı yoksa benzetim |
+| `src/cekirdek/sabah-ozeti.js` | Şefin sabah özeti metni: geciken, sorumlusuz kırmızı, gecikme kimde; ne zaman gönderilmez | Saf fonksiyon; Özet ekranı aynı metni önizler |
+| `server/bildirim.js` | Sabah özeti zamanlayıcısı: saat, günde bir kez, ntfy'ye POST | Önce "bugün gönderildi" işaretlenir, sonra gönderilir |
 | `server/entegrasyon.js` | Arıza Defteri ve Nabız Analiz istemcileri, giden kutusu işleyicisi | Kalıcı hata (4xx) yeniden denenmez; geçici hata 6 kez denenir |
 | `server/ana-veri.js` | Ekipman/kişi listesi: Arıza Defteri → son okunan → gömülü kopya | Arıza Defteri kapalıyken de açılır |
 | `server/app.js` | Alan çözümleme (oturum → `ana`, çerez → deneme alanı), giriş, yollar, başlıklar, fotoğraf, QR | Kural içermez |
@@ -127,13 +133,14 @@ flowchart LR
 
 Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 
-- `bash ~/ysfdurak.com/sunucu/kurulum-nabiz.sh`: soru sormaz. Arıza Defteri yazma anahtarını oradaki `.env`'den alır, site şifresi ve MCP anahtarını üretir.
+- `bash ~/ysfdurak.com/sunucu/kurulum-nabiz.sh`: soru sormaz. Arıza Defteri yazma anahtarını oradaki `.env`'den alır, site şifresini, MCP anahtarını ve sabah özeti için rastgele bir ntfy konusunu üretir; sonunda abone olunacak konuyu yazar.
+- Konteyner dışarıya yalnız ntfy.sh'a çıkar (sabah özeti); diğer bağlantılar iç ağda.
 - İç ağ: `http://ariza-defteri:8080`, `http://nabiz-analiz:8000`. Anahtarlar internete çıkmaz.
 - Konteyner salt okunur, `cap_drop: ALL`, 320 MB.
 
 ## 7. Testler
 
-`npm test`: 23 test. Tarayıcı duman testi telefon boyutunda, açık ve koyu temada çalışır.
+`npm test`: 26 test. Tarayıcı duman testi telefon boyutunda, açık ve koyu temada çalışır.
 
 | Dosya | Neyi kanıtlıyor |
 | --- | --- |
@@ -141,8 +148,9 @@ Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 | `entegrasyon.test.js` | Gönderim sırası ve arıza kimliğinin etikete yazılması; geçici hata yeniden denenir, kalıcı hata hemen "hata"; ziyaretçi alanı hiç gönderilmez |
 | `api.test.js` | Deneme alanı açılır ve yalıtılır; çerez bayrakları; kontrol doğrulaması; kırmızı etiket akışı ve yetki (gönderim yalnız Arıza Defteri'ne); sorumlu ve hedef kuralları, atama yetkisi, geciken ve sorumlu filtreleri, özetteki sayılar; fotoğraf (JPEG baytları, 415, 413, başka site 403, sıkı CSP); IP ve alan sınırları; giriş sınırı (5 deneme); kurum modu; QR; MCP |
 | `v2.test.js` | OEE elle hesaplananla aynı ve toplamda süre ağırlıklı; gerçek veride A × P × K = OEE; A3'te aşınma ve cuma bulgusu karşı önlem olarak geliyor; kayıp, güvenilirlik ve A3 uçları; analiz servisi yokken 503 ama A3 açık; duruş kaydı (süreli ve devam eden) ve hatalı girdiler; duruşun arıza kimliği giden kutusunda duruşa yazılıyor |
+| `sabah-ozeti.test.js` | Sorun yoksa gönderilmez; en eski gecikme üstte, en çok 5 satır, kişi özeti; duran ekipman gecikmişse yüksek öncelik; saatten önce gitmez, günde bir kez gider, başlıklar ASCII, ağ hatası fırlatılmaz; ayar doğrulaması |
 | `gercek-ip.test.js` | Sahte başlıkla hız sınırı atlatılamaz |
-| `tarayici/duman_test.py` | Kişi seç → kart → kontrol (1 sorun) → kırmızı etiket + foto (1280 piksele küçüldü mü) → sayfada Pusula yok → operatör kapatamaz → teknisyen sorumlu atar ve kapatır → geciken etiketler → özet (sorumlu başına iş) → QR; konsol hatası yok |
+| `tarayici/duman_test.py` | Kişi seç → kart → kontrol (1 sorun) → kırmızı etiket + foto (1280 piksele küçüldü mü) → sayfada Pusula yok → operatör kapatamaz → teknisyen sorumlu atar ve kapatır → geciken etiketler → özet (sabah özeti önizlemesi, sorumlu başına iş) → QR; konsol hatası yok |
 
 Örneklem (24 Kasım 2026, yerel, üç servis birlikte):
 
@@ -161,7 +169,7 @@ Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 
 - **Kişiye özel giriş yok.** Kurum modunda şifreyi bilen herkes herkes adına kayıt açabilir. Bir pilot için yeterli, gerçek kullanım için değil. *Şöyle daha iyi olur:* V3'te Pusula'daki gibi Google/Microsoft girişi ya da kişiye özel PIN.
 - **Demo vitrini her gece silinir.** Kurum alanında yapılan gerçek denemeler de gider. Arıza Defteri'ne gönderilmiş ama kapatılmamış arıza orada açık kalır.
-- **Geciken etiket için bildirim yok.** Geciken liste Özet'te ve Etiket'te görünür ama kimseye mesaj gitmez. *Şöyle daha iyi olur:* V3'te şefe günlük "geciken etiketler" özeti (ntfy ya da e-posta).
+- **Sabah özeti tek kişiye, tek kanala.** Bildirim bir ntfy konusuna gider; konuyu bilen herkes okur. Teknisyene "sana atanan geciken" bildirimi yok. *Şöyle daha iyi olur:* kişiye özel giriş gelince (V3) kişi başına bildirim.
 - Çevrimdışı çalışma yok: depoda kapsama zayıfsa kontrol gönderilemez.
 - OEE'nin performans kısmı sentetik (ideal hızın %68–88'i). Gerçek depoda WMS hareket kayıtlarından gelmeli.
 - A3 taslağı dışa yalnız metin ve yazdırma ile çıkıyor. Yalın Araçlar yazılınca oraya aktarılacak.
@@ -183,6 +191,7 @@ Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 12. **Depo OEE'si %75, iyi mi?** Dünya sınıfı %85 kabul edilir ama bu üretim hatları için. Depoda asıl kayıp hızdır (bekleme, yol, arama). Kullanılabilirlik %97 iyi, yani önce akış ve iş dağıtımı iyileştirilmeli, bakım değil.
 13. **A3 neden kural tabanlı?** Her öneri veriden ve kuraldan çıkıyor ve nedeni gösterilebiliyor. Yapay zekâ önerisi denetlenemezdi. Kök nedeni ekip bulur, araç ekibi doğru yere yönlendirir.
 14. **Etiketin hedef tarihi neden kuralla geliyor?** Operatörden her seferinde tarih istemek formu uzatır ve çoğu boş geçer. Kural (duran ekipman 1, kırmızı 3, beyaz 7 gün) makul bir varsayılan verir; şef gerekirse değiştirir. Hedef günü içinde kapanan gecikmiş sayılmaz.
+15. **Sabah özeti neden sorun yokken gitmiyor?** Her sabah "sorun yok" gelen bildirim kısa sürede okunmaz olur; asıl sorun olduğunda da bakılmaz. Bildirim yalnız müdahale gerektiğinde gider. Durumu merak eden Özet ekranındaki önizlemeye bakar.
 
 ## 10. Kendini test et
 
@@ -217,6 +226,6 @@ Cevaplar (önce kendin dene): Hayır, benzetim olarak saklanır · Hayır, 403; 
 
 | Tarih | Değişiklik |
 | --- | --- |
-| 25.11.2026 | V2.1: Pusula bağlantısı çıkarıldı (çift kayıt). Etikete sorumlu ve hedef tarih: varsayılan hedef kuralı, atama (teknisyen/şef), geciken ve "bana atanan" filtreleri, Özet'te geciken, sorumlusuz kırmızı ve sorumlu başına iş, ekipman listesinde gecikme rozeti; MCP'de `sorumlu` ve `geciken` filtreleri. Örnek veride atama. Kurulum artık soru sormuyor. 23 test; CI duman testi üç servisle. |
+| 25.11.2026 | V2.1: Pusula bağlantısı çıkarıldı (çift kayıt). Etikete sorumlu ve hedef tarih: varsayılan hedef kuralı, atama (teknisyen/şef), geciken ve "bana atanan" filtreleri, Özet'te geciken, sorumlusuz kırmızı ve sorumlu başına iş, ekipman listesinde gecikme rozeti; MCP'de `sorumlu` ve `geciken` filtreleri. Örnek veride atama. Kurulum artık soru sormuyor. CI duman testi üç servisle. Aynı gün: şefin sabah özeti (ntfy, 07:30, sorun yoksa gitmez, Özet'te önizleme; kurulum konu üretir). 26 test. |
 | 24.11.2026 | V2: duruş kaydı (süreli ya da devam eden, giden kutusuyla Arıza Defteri'ne), OEE çekirdeği ve Kayıp ekranı (KPI, kayıp şelalesi, günlük OEE çizgisi, 6 büyük kayıp, Pareto, ekipman OEE), Analiz ekranı (Nabız Analiz'den β ve bakım aralığı), Pareto → A3 taslağı (yazdır, metni kopyala), 3 yeni MCP aracı, 6 test + tarayıcı testine V2 adımları, sayfaya meta CSP. Sekmeler: Ekipman · Etiket · Kayıp · Analiz · Özet (QR, Özet'e taşındı). |
 | 24.11.2026 | V1: tip başına kontrol listeleri, QR (SVG), vardiya kontrolü, kırmızı/beyaz etiket ve fotoğraf, rol kuralları, giden kutusu (Pusula MCP, Arıza Defteri API), demo alanları ve sınırları, kurum girişi, özet, 5 araçlı salt okuma MCP, 16 test + tarayıcı testi, Docker sertleştirmesi, kurulum betiği ve Caddy bloğu, güvenlik taraması temiz. Uçtan uca yerel deneme: Pusula işi ve Arıza Defteri kaydı açıldı ve kapandı. |

@@ -30,8 +30,14 @@ export function loadConfig(env = process.env) {
   const mcpAnahtarlari = anahtarlar(env.MCP_ANAHTARLARI, 'MCP_ANAHTARLARI', errors);
   if (mcpEnabled && !mcpAnahtarlari.length) errors.push('MCP_ENABLED=true için MCP_ANAHTARLARI gerekli.');
 
-
   const dataDir = resolve(env.DATA_DIR || join(kok, 'tmp', 'data'));
+
+  // Şefe sabah özeti (ntfy.sh ya da düz metin kabul eden başka bir webhook). Boşsa gönderilmez, yalnız Özet'te görünür.
+  const bildirimUrl = String(env.BILDIRIM_URL || '').trim() || null;
+  if (bildirimUrl && !/^https:\/\/\S+$/.test(bildirimUrl)) errors.push('BILDIRIM_URL https:// ile başlayan bir adres olmalı (ör. https://ntfy.sh/gizli-konu-adi).');
+  const sabahSaati = String(env.SABAH_OZETI_SAATI || '07:30').trim();
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(sabahSaati)) errors.push('SABAH_OZETI_SAATI SS:DD biçiminde olmalı (ör. 07:30).');
+
   return {
     errors,
     appUrl,
@@ -51,6 +57,8 @@ export function loadConfig(env = process.env) {
     arizaUrl: adres(env.ARIZA_DEFTERI_URL, 'ARIZA_DEFTERI_URL', errors),
     arizaAnahtari: String(env.ARIZA_YAZMA_ANAHTARI || '').trim() || null,
     analizUrl: adres(env.ANALIZ_URL, 'ANALIZ_URL', errors),
+    bildirimUrl,
+    sabahSaati,
     mcpEnabled,
     mcpAnahtarlari,
   };
