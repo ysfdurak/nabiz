@@ -5,6 +5,7 @@ import { RENKLER, buVardiyaKontrolu, geciktiMi, kontrolUyumu, sorumluOlabilirMi,
 import { anMs, gecerliGun, gunEkle, gunFarki, isoTr, istanbulGunu } from '../src/cekirdek/zaman.js';
 import { DUNYA_SINIFI, oeeRaporu } from '../src/cekirdek/oee.js';
 import { a3Taslagi } from '../src/cekirdek/a3.js';
+import { sabahOzeti } from '../src/cekirdek/sabah-ozeti.js';
 
 export class KuralHatasi extends Error {
   constructor(mesaj, { durum = 400, kod = 'kural' } = {}) {
@@ -38,7 +39,7 @@ const kimlikBicimi = (v, onek) => typeof v === 'string' && new RegExp(`^${onek}-
  * @param {() => object} o.ana        güncel ana veriler (Arıza Defteri'nden, önbellekli)
  * @param {ReturnType<import('./entegrasyon.js').arizaDefteriIstemcisi>} o.ariza
  */
-export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, sinirlar = {}, simdi = Date.now }) {
+export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, appUrl = null, sinirlar = {}, simdi = Date.now }) {
   const S = { kontrol: 60, etiket: 30, foto: 10, demoFoto: 200, durus: 40, ...sinirlar };
   // Paylaşılan analiz verisi (her ziyaretçi için aynı): kısa süreli önbellek, dış servisleri yormamak için.
   const onbellek = new Map();
@@ -417,6 +418,17 @@ export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, sin
         tur, turBilgi: { ...t, tipAd: ana().tipler[t.tip]?.ad }, kayitlar: kayitlar.kayitlar, pareto: o.pareto,
         guvenilirlik: gv, aralik, bulgular: b.bulgular, donemGun: gun,
       });
+    },
+
+    /** Şefin sabah özeti (bildirim metni ve önizleme): geciken etiketler, sorumlusuz kırmızılar, gecikme kimde. */
+    sabahOzeti(kum) {
+      const bugun = istanbulGunu(simdi());
+      const acik = store.etiketler(kum, { durum: 'acik', limit: 2000 });
+      const gecikenler = acik.filter((e) => geciktiMi(e, bugun)).map(etiketGorunumu);
+      const sorumsuzKirmizilar = acik.filter((e) => e.renk === 'kirmizi' && !e.sorumlu).map(etiketGorunumu);
+      const sorumluYuku = [...Map.groupBy(gecikenler.filter((e) => e.sorumlu), (e) => e.sorumluAd)].map(([ad, l]) => ({ ad, geciken: l.length }))
+        .sort((x, y) => y.geciken - x.geciken);
+      return { gun: bugun, ...sabahOzeti({ gecikenler, sorumsuzKirmizilar, sorumluYuku }, { bugun, uygulamaUrl: appUrl }) };
     },
 
     /** Yönetici özeti: kontrol uyumu, açık etiketler, kapanma süreleri, en sık sorunlu maddeler. */

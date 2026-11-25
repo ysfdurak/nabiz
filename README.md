@@ -18,7 +18,7 @@ Ticari olmayan bir portföy projesidir. Arayüz Türkçedir. Demo veri sentetikt
 - **QR → ekipman kartı.** Her ekipmanın QR kodu (`#/e/RT-03`) yazdırılabilir sayfada hazır durur. Telefon kamerası yeterlidir, uygulama içinde tarayıcı gerekmez.
 - **Kontrol listesi:** Tipine göre 4-6 madde, her biri "tamam" ya da "sorun var". Sorunlu madde etiket açmaya götürür; rengi ve arıza türü önerilir.
 - **Fotoğraf:** Telefonda 1280 piksele küçültülür ve JPEG'e çevrilir. Sunucu yalnız JPEG kabul eder, en çok 1,5 MB, başlık baytlarını da denetler.
-- **Takip:** Geciken etiketler, "bana atanan" listesi, sorumlu başına açık iş. İş takibi için ayrı bir sisteme kayıt taşınmaz; arızanın tek kaynağı Arıza Defteri'dir.
+- **Takip:** Geciken etiketler, "bana atanan" listesi, sorumlu başına açık iş. Şefe her sabah telefon bildirimi (ntfy): geciken etiketler ve sorumlusuz kırmızılar; sorun yoksa gelmez. İş takibi için ayrı bir sisteme kayıt taşınmaz; arızanın tek kaynağı Arıza Defteri'dir.
 - **Gönderim kuyruğu:** Arıza Defteri o an cevap vermezse gönderim kaybolmaz. 1, 5, 15 ve 60 dakika arayla yeniden denenir. Durumu etiket sayfasında görünür.
 - **Özet:** Kontrol uyumu (bugün, 7 gün, 30 gün), eksik kontroller, açık ve geciken etiketler, sorumlu başına iş, ortalama kapanma süresi ve en sık sorunlu maddeler.
 - **Demo:** Her ziyaretçi kendi deneme alanında çalışır. Alan örnek 7 günlük geçmişle açılır ve 72 saat sonra silinir. Gönderimler gerçek sisteme gitmez, "gidecek içerik" olarak gösterilir.

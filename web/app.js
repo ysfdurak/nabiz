@@ -591,7 +591,7 @@ async function etiketlerSayfasi(q) {
 
 async function ozetSayfasi(q) {
   const gun = q.get('gun') || '7';
-  const o = await api(`/v1/ozet?gun=${encodeURIComponent(gun)}`);
+  const [o, so] = await Promise.all([api(`/v1/ozet?gun=${encodeURIComponent(gun)}`), api('/v1/sabah-ozeti')]);
   const kpi = (ad, deger, not) => el('div', { class: 'kpi' }, el('span', {}, ad), el('strong', {}, deger), not ? el('small', {}, not) : null);
   sayfa(
     el('div', { class: 'baslik-satir' }, el('h1', {}, 'TPM özeti'), el('a', { class: 'dugme kucuk', href: '#/qr' }, 'QR etiketleri'),
@@ -605,11 +605,14 @@ async function ozetSayfasi(q) {
       kpi('Sorumlusuz kırmızı', String(o.acik.sorumsuzKirmizi), 'atama bekliyor'),
       kpi('Kapanma (kırmızı)', o.ortKapanmaSaat.kirmizi == null ? '–' : `${o.ortKapanmaSaat.kirmizi.toLocaleString('tr-TR')} sa`, 'ortalama'),
       kpi('Kapanma (beyaz)', o.ortKapanmaSaat.beyaz == null ? '–' : `${o.ortKapanmaSaat.beyaz.toLocaleString('tr-TR')} sa`, 'ortalama')),
+    el('section', { class: 'grup' }, el('h2', {}, 'Şefin sabah özeti'),
+      el('p', { class: 'ipucu' }, S.demo ? 'Kurulumda her sabah şefin telefonuna bildirim olarak gider. Demoda yalnız burada görünür.' : 'Her sabah şefin telefonuna bildirim olarak gider (BILDIRIM_URL tanımlıysa).'),
+      el('div', { class: 'bildirim-onizleme' }, el('strong', {}, so.baslik), el('pre', {}, so.gonderilecek ? so.metin : `${so.metin} Bugün bildirim gönderilmez.`))),
+    el('section', { class: 'grup' }, el('h2', {}, 'Geciken etiketler'), o.gecikenler.length ? etiketListesi(o.gecikenler) : el('p', { class: 'soluk' }, 'Geciken etiket yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'Bugün eksik kontroller'),
       o.bugunUyum.eksik.length ? el('ul', { class: 'liste sade' }, ...o.bugunUyum.eksik.map((x) => el('li', {}, el('a', { href: `#/e/${x.kod}` }, x.kod), ` · ${x.vardiyalar.map((v) => `${v}. vardiya`).join(', ')}`))) : el('p', { class: 'soluk' }, 'Eksik kontrol yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'En sık sorunlu maddeler'),
       o.sikMaddeler.length ? el('ul', { class: 'liste sade' }, ...o.sikMaddeler.map((m) => el('li', {}, el('strong', {}, `${m.adet}×`), ` ${m.ekipman} · ${m.metin}`))) : el('p', { class: 'soluk' }, 'Sorunlu madde yok.')),
-    el('section', { class: 'grup' }, el('h2', {}, 'Geciken etiketler'), o.gecikenler.length ? etiketListesi(o.gecikenler) : el('p', { class: 'soluk' }, 'Geciken etiket yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'Sorumlu başına açık iş'),
       o.sorumluYuku.length ? el('div', { class: 'tablo-kap' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Sorumlu'), el('th', { class: 'sag' }, 'Açık'), el('th', { class: 'sag' }, 'Geciken'))),
         el('tbody', {}, ...o.sorumluYuku.map((x) => el('tr', {}, el('td', {}, el('a', { href: `#/etiketler?durum=acik&ek=&sorumlu=${x.kod}` }, x.ad)), el('td', { class: 'sag' }, String(x.acik)),

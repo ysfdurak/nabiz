@@ -115,6 +115,8 @@ with sync_playwright() as p:
         s.goto(adres + "#/ozet")
         s.wait_for_selector(".kpi")
         s.wait_for_selector("h2:has-text('Sorumlu başına açık iş')")
+        s.wait_for_selector(".bildirim-onizleme pre")
+        assert "geciken" in s.inner_text(".bildirim-onizleme"), "sabah özeti önizlemesi geciken etiketleri göstermeli"
         s.screenshot(path=str(cikti / "ozet.png"), full_page=True)
         s.goto(adres + "#/qr")
         s.wait_for_selector(".qr img")
