@@ -30,9 +30,6 @@ export function loadConfig(env = process.env) {
   const mcpAnahtarlari = anahtarlar(env.MCP_ANAHTARLARI, 'MCP_ANAHTARLARI', errors);
   if (mcpEnabled && !mcpAnahtarlari.length) errors.push('MCP_ENABLED=true için MCP_ANAHTARLARI gerekli.');
 
-  const pusulaUrl = adres(env.PUSULA_MCP_URL, 'PUSULA_MCP_URL', errors);
-  const pusulaAnahtari = String(env.PUSULA_ANAHTARI || '').trim();
-  if (pusulaUrl && pusulaAnahtari.length < 32) errors.push('PUSULA_MCP_URL tanımlıysa PUSULA_ANAHTARI (en az 32 karakter) gerekli.');
 
   const dataDir = resolve(env.DATA_DIR || join(kok, 'tmp', 'data'));
   return {
@@ -53,11 +50,7 @@ export function loadConfig(env = process.env) {
     dakikalikIstek: sayi(env.DAKIKALIK_ISTEK, 90, 5, 1000),
     arizaUrl: adres(env.ARIZA_DEFTERI_URL, 'ARIZA_DEFTERI_URL', errors),
     arizaAnahtari: String(env.ARIZA_YAZMA_ANAHTARI || '').trim() || null,
-    pusulaUrl,
     analizUrl: adres(env.ANALIZ_URL, 'ANALIZ_URL', errors),
-    pusulaAnahtari: pusulaAnahtari || null,
-    pusulaCalismaAlani: String(env.PUSULA_CALISMA_ALANI || '').trim() || null,
-    pusulaEkip: String(env.PUSULA_EKIP || '').trim() || null,
     mcpEnabled,
     mcpAnahtarlari,
   };

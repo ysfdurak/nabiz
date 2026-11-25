@@ -1,10 +1,10 @@
 // Demo için sentetik geçmiş: son 7 günün kontrolleri ve etiketleri. Tohum = tarih; aynı gün hep aynı veri.
 // Hikâye Arıza Defteri'yle uyumlu: RT-03'te hidrolik sorunu sık (cuma), forkliftlerde otonom bakım oturmuş (uyum yüksek),
-// gece vardiyasında kontrol daha sık atlanıyor, sorter'ın kırmızı etiketleri Murat Kaya'yı bekliyor.
+// gece vardiyasında kontrol daha sık atlanıyor, sorter'ın kırmızı etiketleri Murat Kaya'yı bekliyor (sorumlu o, gecikenler onda birikir).
 import { listeBul } from './kontrol-listeleri.js';
 import { uretec } from './rastgele.js';
-import { gunEkle, haftaGunu } from './zaman.js';
-import { vardiyaBasi } from './kurallar.js';
+import { gunEkle, haftaGunu, istanbulGunu } from './zaman.js';
+import { vardiyaBasi, varsayilanHedef } from './kurallar.js';
 
 const ACIKLAMALAR = {
   hidrolik: ['Sol silindirin altında yağ damlası var', 'Zeminde avuç kadar yağ lekesi', 'Kaldırırken hortumdan sızıntı'],
@@ -44,6 +44,7 @@ export function ornekGecmis(ana, simdi, gunSayisi = 7) {
   for (let i = gunSayisi - 1; i >= 0; i--) {
     const gun = gunEkle(bugun, -i);
     const r = uretec(`nabiz-ornek:${gun}`);
+    const ra = uretec(`nabiz-ornek-atama:${gun}`); // atama ayrı üreteçte: eski örnek verinin geri kalanı değişmesin
     for (const v of [3, 1, 2]) {
       for (const e of ana.ekipmanlar) {
         if (!ana.tipler[e.tip]?.vardiyalar.includes(v)) continue;
@@ -69,9 +70,12 @@ export function ornekGecmis(ana, simdi, gunSayisi = 7) {
           const kapanis = acilis + r.tam(m.renk === 'beyaz' ? 10 : 60, m.renk === 'beyaz' ? 60 : 600) * 60_000;
           const kapali = kapanacak && kapanis <= simdi;
           const kapatan = m.renk === 'beyaz' ? kisi : e.tip === 'sorter' ? teknisyen.find((t) => t.kod === 'K-MKAYA') : r.sec(teknisyen);
+          const durus = m.renk === 'kirmizi' && r.sayi() < 0.12;
+          // Sorumlu: beyazda açan operatör; kırmızıda sorter → Murat Kaya, diğerleri çoğunlukla bir teknisyen (bazısı atanmamış).
+          const sorumlu = m.renk === 'beyaz' ? kisi.kod : e.tip === 'sorter' ? 'K-MKAYA' : ra.sayi() < 0.8 ? ra.sec(teknisyen).kod : null;
           etiketler.push({
             ekipman: e.kod, renk: m.renk, madde: m.kod, tur: m.tur, aciklama: r.sec(ACIKLAMALAR[m.kod] || ['Kontrolde sorun görüldü']),
-            kisi: kisi.kod, olusturma: acilis, durus: m.renk === 'kirmizi' && r.sayi() < 0.12,
+            kisi: kisi.kod, olusturma: acilis, durus, sorumlu, hedef: varsayilanHedef(m.renk, durus, istanbulGunu(acilis)),
             durum: kapali ? 'kapali' : 'acik', kapatan: kapali ? kapatan.kod : null, kapanis: kapali ? kapanis : null,
             kapatmaNotu: kapali ? (m.renk === 'beyaz' ? 'Temizlendi / düzeltildi' : 'Parça değiştirildi, test edildi') : null,
           });

@@ -75,7 +75,7 @@ export function a3Taslagi(g) {
       ] },
       { ad: 'Hedef', metin: [`${g.donemGun} günlük duruşu ${tr(durus / 60 / 2)} saate (yarıya) indirmek; 90 gün içinde ölçülür.`] },
       { ad: 'Karşı önlemler', metin: onlemler },
-      { ad: 'Takip', metin: ['Haftalık: bu türün adet ve duruşu (Nabız → Kayıp).', 'Sorumlu ve tarih: ... (Pusula\'da iş olarak açılabilir)'] },
+      { ad: 'Takip', metin: ['Haftalık: bu türün adet ve duruşu (Nabız → Kayıp).', 'Sorumlu ve tarih: ... (karşı önlem Nabız\'da kırmızı etiketle, sorumlu ve hedef tarihle izlenebilir)'] },
     ],
   };
 }

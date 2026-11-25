@@ -11,7 +11,7 @@ import { loadConfig, kok } from '../server/config.js';
 import { openStore } from '../server/store.js';
 import { createApp } from '../server/app.js';
 import { anaVeriKaynagi } from '../server/ana-veri.js';
-import { DisServisHatasi, gidenIsleyici, pusulaIstemcisi } from '../server/entegrasyon.js';
+import { DisServisHatasi, gidenIsleyici } from '../server/entegrasyon.js';
 import ana from '../veri/ana-veriler.json' with { type: 'json' };
 
 const oku = (ad) => JSON.parse(readFileSync(new URL(`./veri/${ad}`, import.meta.url)));
@@ -70,7 +70,7 @@ async function kur({ analizAcik = true, arizaAcik = true } = {}) {
   } : { acik: false, yazabilir: false };
   const analiz = analizAcik ? { acik: true, guvenilirlik: async () => GUV } : { acik: true, guvenilirlik: async () => { throw new DisServisHatasi("Nabız Analiz'e ulaşılamadı (bağlantı)."); } };
   const a = anaVeriKaynagi({ store, ariza: { acik: false }, kok });
-  const app = createApp({ config, store, ana: a.al, ariza, pusula: pusulaIstemcisi({}), analiz, simdi: () => SIMDI });
+  const app = createApp({ config, store, ana: a.al, ariza, analiz, simdi: () => SIMDI });
   const server = createServer(app.handle);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const kok2 = `http://127.0.0.1:${server.address().port}`;
@@ -143,7 +143,7 @@ test('giden kutusu: duruşun arıza kimliği duruşa yazılır, kapatma onu kull
   s.gidenEkle('ana', { durus: id, hedef: 'ariza_kapat', govde: {} }, 0);
   const kapatilan = [];
   const ariza = { bildir: async () => ({ id: 'G-20261124-aaaaaaaa' }), kapat: async (aid) => { kapatilan.push(aid); return { id: aid }; } };
-  await gidenIsleyici({ store: s, ariza, pusula: {}, simdi: () => 0 }).isle();
+  await gidenIsleyici({ store: s, ariza, simdi: () => 0 }).isle();
   assert.equal(s.durusBul('ana', id).ariza_id, 'G-20261124-aaaaaaaa');
   assert.deepEqual(kapatilan, ['G-20261124-aaaaaaaa']);
 });

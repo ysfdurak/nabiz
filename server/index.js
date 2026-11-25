@@ -5,7 +5,7 @@ import { kok, loadConfig } from './config.js';
 import { openStore } from './store.js';
 import { createApp } from './app.js';
 import { anaVeriKaynagi } from './ana-veri.js';
-import { analizIstemcisi, arizaDefteriIstemcisi, gidenIsleyici, pusulaIstemcisi } from './entegrasyon.js';
+import { analizIstemcisi, arizaDefteriIstemcisi, gidenIsleyici } from './entegrasyon.js';
 import { ornekGecmis } from '../src/cekirdek/ornek.js';
 import { istanbulGunu } from '../src/cekirdek/zaman.js';
 
@@ -19,14 +19,13 @@ if (config.errors.length) {
 mkdirSync(config.dataDir, { recursive: true });
 const store = openStore(config.dbFile);
 const ariza = arizaDefteriIstemcisi({ url: config.arizaUrl, anahtar: config.arizaAnahtari });
-const pusula = pusulaIstemcisi({ url: config.pusulaUrl, anahtar: config.pusulaAnahtari, calismaAlani: config.pusulaCalismaAlani, ekip: config.pusulaEkip });
 const analiz = analizIstemcisi({ url: config.analizUrl });
 const ana = anaVeriKaynagi({ store, ariza, kok, log });
 await ana.yenile();
 
-const app = createApp({ config, store, ana: ana.al, ariza, pusula, analiz, log });
+const app = createApp({ config, store, ana: ana.al, ariza, analiz, log });
 app.ornekKaynagi(() => ornekGecmis(ana.al(), Date.now()));
-const giden = gidenIsleyici({ store, ariza, pusula, log });
+const giden = gidenIsleyici({ store, ariza, log });
 
 /** Demo kurulumunda kurum alanı ("ana") her gün örnek geçmişle tazelenir: vitrin ve MCP için. */
 function vitrin() {
@@ -46,7 +45,7 @@ const server = createServer(app.handle);
 server.requestTimeout = 60_000;
 server.headersTimeout = 15_000;
 server.listen(config.port, config.host, () => {
-  log(`Nabız: ${config.appUrl} (dinlenen ${config.host}:${config.port}) · mod: ${config.mod} · ana veri: ${ana.kaynak()} · Arıza Defteri: ${ariza.acik ? (ariza.yazabilir ? 'okuma+yazma' : 'okuma') : 'kapalı'} · Pusula: ${pusula.acik ? 'açık' : 'kapalı'} · Analiz: ${analiz.acik ? 'açık' : 'kapalı'} · MCP: ${config.mcpEnabled ? 'açık' : 'kapalı'}`);
+  log(`Nabız: ${config.appUrl} (dinlenen ${config.host}:${config.port}) · mod: ${config.mod} · ana veri: ${ana.kaynak()} · Arıza Defteri: ${ariza.acik ? (ariza.yazabilir ? 'okuma+yazma' : 'okuma') : 'kapalı'} · Analiz: ${analiz.acik ? 'açık' : 'kapalı'} · MCP: ${config.mcpEnabled ? 'açık' : 'kapalı'}`);
 });
 
 function shutdown(signal) {

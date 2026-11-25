@@ -1,7 +1,7 @@
 # ysfdurak.com ortak altyapısında çalıştırma.
 #   cd deploy && sudo docker compose -f docker-compose.ortak.yml up -d --build
 # Nabız hiçbir portu dışarı açmaz; ortak Caddy "web" ağı üzerinden nabiz:8080'e ulaşır.
-# Arıza Defteri'ne (http://ariza-defteri:8080) ve Pusula'ya (http://pusula:8080/mcp) aynı ağdan, internete çıkmadan bağlanır.
+# Arıza Defteri'ne (http://ariza-defteri:8080) ve Nabız Analiz'e (http://nabiz-analiz:8000) aynı ağdan, internete çıkmadan bağlanır.
 name: nabiz
 services:
   nabiz:
