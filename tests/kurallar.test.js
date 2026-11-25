@@ -50,3 +50,17 @@ test('her kontrol listesi kısa ve maddeleri Arıza Defteri türlerine bağlı',
     }
   }
 });
+
+test('takip kuralları: varsayılan hedef, gecikme, kim sorumlu olabilir', async () => {
+  const { varsayilanHedef, geciktiMi, sorumluOlabilirMi } = await import('../src/cekirdek/kurallar.js');
+  assert.equal(varsayilanHedef('kirmizi', true, '2026-11-24'), '2026-11-25');
+  assert.equal(varsayilanHedef('kirmizi', false, '2026-11-24'), '2026-11-27');
+  assert.equal(varsayilanHedef('beyaz', false, '2026-11-28'), '2026-12-05', 'ay geçişi');
+  assert.equal(geciktiMi({ durum: 'acik', hedef: '2026-11-24' }, '2026-11-24'), false, 'hedef günü içinde');
+  assert.equal(geciktiMi({ durum: 'acik', hedef: '2026-11-23' }, '2026-11-24'), true);
+  assert.equal(geciktiMi({ durum: 'kapali', hedef: '2026-11-01' }, '2026-11-24'), false, 'kapanan gecikmiş sayılmaz');
+  assert.equal(geciktiMi({ durum: 'acik', hedef: null }, '2026-11-24'), false);
+  const tek = { rol: 'teknisyen' }, op = { rol: 'operator' }, sef = { rol: 'sef' };
+  assert.deepEqual([sorumluOlabilirMi(tek, 'kirmizi'), sorumluOlabilirMi(op, 'kirmizi'), sorumluOlabilirMi(sef, 'kirmizi')], [true, false, false]);
+  assert.deepEqual([sorumluOlabilirMi(tek, 'beyaz'), sorumluOlabilirMi(op, 'beyaz'), sorumluOlabilirMi(sef, 'beyaz')], [true, true, false]);
+});

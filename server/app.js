@@ -21,8 +21,8 @@ const OTURUM_CEREZI = 'nabiz_oturum';
  * @param {ReturnType<import('./config.js').loadConfig>} o.config
  * @param {ReturnType<import('./store.js').openStore>} o.store
  */
-export function createApp({ config, store, ana, ariza, pusula, analiz, log = () => {}, simdi = Date.now }) {
-  const servis = servisOlustur({ store, ana, ariza, pusula, analiz, appUrl: config.appUrl, simdi });
+export function createApp({ config, store, ana, ariza, analiz, log = () => {}, simdi = Date.now }) {
+  const servis = servisOlustur({ store, ana, ariza, analiz, simdi });
   const ozet = (v) => createHash('sha256').update(String(v)).digest();
   const mcpAnahtarlari = config.mcpAnahtarlari.map(ozet);
   const sifreOzeti = config.siteSifresi ? ozet(config.siteSifresi) : null;
@@ -193,11 +193,12 @@ export function createApp({ config, store, ana, ariza, pusula, analiz, log = () 
     if (path === '/v1/guvenilirlik' && !yazma) return json(res, 200, await servis.guvenilirlik());
     m = /^\/v1\/a3\/([A-Z]{2}-[A-Z]{3})$/.exec(path);
     if (m && !yazma) return json(res, 200, await servis.a3(m[1], q));
-    m = /^\/v1\/etiket\/([^/]+)(\/kapat|\/foto)?$/.exec(path);
+    m = /^\/v1\/etiket\/([^/]+)(\/kapat|\/ata|\/foto)?$/.exec(path);
     if (m) {
       const [, id, alt] = m;
       if (!alt && !yazma) return json(res, 200, servis.etiketDetay(kum, id));
       if (alt === '/kapat' && yazma) return json(res, 200, servis.etiketKapat(kum, id, await jsonOku(req)));
+      if (alt === '/ata' && yazma) return json(res, 200, servis.etiketAta(kum, id, await jsonOku(req)));
       if (alt === '/foto' && yazma) {
         if (!/^image\/jpeg$/i.test(String(req.headers['content-type'] || ''))) throw new KuralHatasi('Fotoğraf image/jpeg olarak gönderilmeli.', { durum: 415 });
         return json(res, 201, servis.fotoKaydet(kum, id, await govdeOku(req, FOTO_SINIRI)));

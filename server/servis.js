@@ -1,9 +1,8 @@
 // Servis katmanı: web kapısı (/v1) ve MCP kapısı (/mcp) aynı fonksiyonları çağırır. Kurallar burada.
 // Her işlem bir "kum" (alan) içinde çalışır: 'ana' ya da ziyaretçinin kendi alanı (store.js).
 import { KONTROL_LISTELERI, listeBul } from '../src/cekirdek/kontrol-listeleri.js';
-import { RENKLER, buVardiyaKontrolu, kontrolUyumu, vardiyaBul, yetkiliMi } from '../src/cekirdek/kurallar.js';
-import { anMs, gunEkle, isoTr, istanbulGunu } from '../src/cekirdek/zaman.js';
-import { pusulaIsi } from './entegrasyon.js';
+import { RENKLER, buVardiyaKontrolu, geciktiMi, kontrolUyumu, sorumluOlabilirMi, varsayilanHedef, vardiyaBul, yetkiliMi } from '../src/cekirdek/kurallar.js';
+import { anMs, gecerliGun, gunEkle, gunFarki, isoTr, istanbulGunu } from '../src/cekirdek/zaman.js';
 import { DUNYA_SINIFI, oeeRaporu } from '../src/cekirdek/oee.js';
 import { a3Taslagi } from '../src/cekirdek/a3.js';
 
@@ -38,9 +37,8 @@ const kimlikBicimi = (v, onek) => typeof v === 'string' && new RegExp(`^${onek}-
  * @param {ReturnType<import('./store.js').openStore>} o.store
  * @param {() => object} o.ana        güncel ana veriler (Arıza Defteri'nden, önbellekli)
  * @param {ReturnType<import('./entegrasyon.js').arizaDefteriIstemcisi>} o.ariza
- * @param {ReturnType<import('./entegrasyon.js').pusulaIstemcisi>} o.pusula
  */
-export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: false }, appUrl, sinirlar = {}, simdi = Date.now }) {
+export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, sinirlar = {}, simdi = Date.now }) {
   const S = { kontrol: 60, etiket: 30, foto: 10, demoFoto: 200, durus: 40, ...sinirlar };
   // Paylaşılan analiz verisi (her ziyaretçi için aynı): kısa süreli önbellek, dış servisleri yormamak için.
   const onbellek = new Map();
@@ -74,9 +72,23 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
     const k = typeof kod === 'string' ? kisiBul(kod) : null;
     if (!k) throw new KuralHatasi('Kişi seçilmeli (kişi kodu tanınmıyor).');
     if (!yetkiliMi(k, eylem, etiket)) {
-      throw new KuralHatasi(eylem === 'etiket_kapat' ? 'Kırmızı etiketi yalnız teknisyen ya da şef kapatabilir.' : 'Bu işlem için yetkin yok.', { durum: 403, kod: 'yetki' });
+      const mesaj = { etiket_kapat: 'Kırmızı etiketi yalnız teknisyen ya da şef kapatabilir.', etiket_ata: 'Sorumlu atamayı ve hedef tarihi yalnız teknisyen ya da şef değiştirebilir.' };
+      throw new KuralHatasi(mesaj[eylem] ?? 'Bu işlem için yetkin yok.', { durum: 403, kod: 'yetki' });
     }
     return k;
+  }
+  function sorumluDogrula(kod, renk) {
+    const k = typeof kod === 'string' ? kisiBul(kod) : null;
+    if (!k) throw new KuralHatasi('Sorumlu kişi tanınmıyor.');
+    if (!sorumluOlabilirMi(k, renk)) throw new KuralHatasi(renk === 'kirmizi' ? 'Kırmızı etiketin sorumlusu bir teknisyen olmalı.' : 'Beyaz etiketin sorumlusu bir operatör ya da teknisyen olmalı.');
+    return k;
+  }
+  /** Hedef tarih: bugün ya da sonrası, en çok 90 gün ileri (yanlış yıl girişini yakalar). */
+  function hedefDogrula(gun, bugun) {
+    if (!gecerliGun(gun)) throw new KuralHatasi('Hedef tarih YYYY-AA-GG biçiminde olmalı.');
+    if (gun < bugun) throw new KuralHatasi('Hedef tarih geçmişte olamaz.');
+    if (gunFarki(bugun, gun) > 90) throw new KuralHatasi('Hedef tarih en çok 90 gün ileri olabilir.');
+    return gun;
   }
   /** Ziyaretçi alanında günlük sınır; 'ana' alanında yok (kurum içi kullanım). */
   function hak(kum, tur) {
@@ -92,12 +104,10 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
   }
   /** Gönderimi kuyruğa yazar. Ziyaretçi alanında ya da bağlantı tanımlı değilse gönderilmez, "benzetim" olarak saklanır. */
   function kuyruk(kum, etiket, hedef, govde, durus = null) {
-    const pusulaHedefi = hedef.startsWith('pusula');
-    const bagli = pusulaHedefi ? pusula.acik : ariza.yazabilir;
-    const gercek = kum === 'ana' && bagli;
+    const gercek = kum === 'ana' && ariza.yazabilir;
     store.gidenEkle(kum, {
       etiket, durus, hedef, govde, durum: gercek ? 'bekliyor' : 'benzetim',
-      sonuc: gercek ? null : { not: kum !== 'ana' ? 'Deneme alanı: gerçek sisteme gönderilmedi, gönderilecek içerik gösteriliyor.' : `${pusulaHedefi ? 'Pusula' : 'Arıza Defteri'} bağlantısı tanımlı değil.` },
+      sonuc: gercek ? null : { not: kum !== 'ana' ? 'Deneme alanı: gerçek sisteme gönderilmedi, gönderilecek içerik gösteriliyor.' : 'Arıza Defteri bağlantısı tanımlı değil.' },
     }, simdi());
   }
 
@@ -109,6 +119,9 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
     ekipmanAd: ekipmanBul(e.ekipman)?.ad ?? e.ekipman,
     kisiAd: kisiBul(e.kisi)?.ad ?? e.kisi,
     kapatanAd: e.kapatan ? kisiBul(e.kapatan)?.ad ?? e.kapatan : null,
+    sorumluAd: e.sorumlu ? kisiBul(e.sorumlu)?.ad ?? e.sorumlu : null,
+    gecikti: geciktiMi(e, istanbulGunu(simdi())),
+    gecikmeGun: geciktiMi(e, istanbulGunu(simdi())) ? gunFarki(e.hedef, istanbulGunu(simdi())) : 0,
     maddeMetni: e.madde ? listeBul(ekipmanBul(e.ekipman)?.tip).find((m) => m.kod === e.madde)?.metin ?? null : null,
   });
   const durusGorunumu = (d) => d && ({
@@ -132,7 +145,7 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
         arizaTurleri: a.arizaTurleri.map(({ kod, tip, ad, kayip }) => ({ kod, tip, ad, kayip })),
         kontrolListeleri: KONTROL_LISTELERI,
         renkler: RENKLER,
-        baglantilar: { pusula: pusula.acik, arizaDefteri: ariza.acik, arizaYazma: ariza.yazabilir, analiz: analiz.acik },
+        baglantilar: { arizaDefteri: ariza.acik, arizaYazma: ariza.yazabilir, analiz: analiz.acik },
         sinirlar: kum === 'ana' ? null : S,
       };
     },
@@ -152,7 +165,7 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
             ...e,
             calisiyor: ana().tipler[e.tip]?.vardiyalar.includes(v.no) ?? true,
             kontrol: k ? { id: k.id, saat: isoTr(k.bitis).slice(11, 16), nokSayisi: k.nokSayisi, kisiAd: kisiBul(k.kisi)?.ad } : null,
-            acikEtiket: { kirmizi: et.filter((x) => x.renk === 'kirmizi').length, beyaz: et.filter((x) => x.renk === 'beyaz').length, durus: et.some((x) => x.durus) },
+            acikEtiket: { kirmizi: et.filter((x) => x.renk === 'kirmizi').length, beyaz: et.filter((x) => x.renk === 'beyaz').length, durus: et.some((x) => x.durus), geciken: et.filter((x) => geciktiMi(x, v.gun)).length },
           };
         }),
       };
@@ -203,7 +216,10 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
       };
     },
 
-    /** Etiket açar. Kırmızı → Pusula işi; "çalışamıyor" → Arıza Defteri'ne arıza. */
+    /**
+     * Etiket açar. "Çalışamıyor" → Arıza Defteri'ne arıza. Takip Nabız'da: sorumlu (isteğe bağlı) ve hedef tarih.
+     * Hedef verilmezse kurala göre konur (kurallar.js → HEDEF_GUN); beyazın sorumlusu verilmezse açan kişidir.
+     */
     etiketAc(kum, g = {}) {
       const e = ekipmanZorunlu(g.ekipman);
       const kisi = kisiZorunlu(g.kisi, 'etiket_ac');
@@ -228,16 +244,17 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
         if (!kimlikBicimi(g.kontrol, 'K') || !store.kontrolBul(kum, g.kontrol)) throw new KuralHatasi('Kontrol kaydı bulunamadı.');
         kontrol = g.kontrol;
       }
+      const bugun = istanbulGunu(simdi());
+      const sorumlu = g.sorumlu != null ? sorumluDogrula(g.sorumlu, g.renk).kod : g.renk === 'beyaz' && sorumluOlabilirMi(kisi, 'beyaz') ? kisi.kod : null;
+      const hedef = g.hedefTarih != null ? hedefDogrula(g.hedefTarih, bugun) : varsayilanHedef(g.renk, durus, bugun);
       hak(kum, 'etiket');
       const an = simdi();
-      const id = store.etiketEkle(kum, { ekipman: e.kod, renk: g.renk, madde: madde?.kod, tur, aciklama, kisi: kisi.kod, olusturma: an, durus, kontrol });
-      const etiket = store.etiketBul(kum, id);
-      if (g.renk === 'kirmizi') kuyruk(kum, id, 'pusula_ac', pusulaIsi(etiket, e, kisi, madde, appUrl));
+      const id = store.etiketEkle(kum, { ekipman: e.kod, renk: g.renk, madde: madde?.kod, tur, aciklama, kisi: kisi.kod, olusturma: an, durus, kontrol, sorumlu, hedef });
       if (durus) kuyruk(kum, id, 'ariza_bildir', { ekipman: e.kod, tur, bildiren: kisi.kod, aciklama: `Nabız etiketi ${id}: ${aciklama}`.slice(0, 300), baslangic: isoTr(an) });
       return this.etiketDetay(kum, id);
     },
 
-    /** Etiketi kapatır. Bağlı Pusula işi ve Arıza Defteri kaydı da kapatılır (kuyrukla). */
+    /** Etiketi kapatır. Bağlı Arıza Defteri kaydı da kapatılır (kuyrukla). */
     etiketKapat(kum, id, g = {}) {
       if (!kimlikBicimi(id, 'E')) throw new KuralHatasi('Etiket kimliği geçersiz.');
       const etiket = store.etiketBul(kum, id);
@@ -248,11 +265,24 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
       const an = simdi();
       if (!store.etiketKapat(kum, id, { kapatan: kisi.kod, kapanis: an, not })) throw new KuralHatasi('Etiket zaten kapalı.', { durum: 409, kod: 'kapali' });
       const gidenler = store.gidenler(kum, id);
-      if (gidenler.some((x) => x.hedef === 'pusula_ac')) kuyruk(kum, id, 'pusula_kapat', { not: `${kisi.ad}: ${not}` });
       if (gidenler.some((x) => x.hedef === 'ariza_bildir')) {
         // Arıza Defteri kapatırken çözen kişi kodu ister; operatör kapattıysa da kendi kodu gider.
         kuyruk(kum, id, 'ariza_kapat', { cozen: kisi.kod, islem: not, bitis: isoTr(an) });
       }
+      return this.etiketDetay(kum, id);
+    },
+
+    /** Sorumlu atar ve/veya hedef tarihi değiştirir (teknisyen ve şef). sorumlu: null → atamayı kaldırır. */
+    etiketAta(kum, id, g = {}) {
+      if (!kimlikBicimi(id, 'E')) throw new KuralHatasi('Etiket kimliği geçersiz.');
+      const etiket = store.etiketBul(kum, id);
+      if (!etiket) throw new KuralHatasi('Etiket bulunamadı.', { durum: 404, kod: 'yok' });
+      if (etiket.durum !== 'acik') throw new KuralHatasi('Kapalı etiketin sorumlusu değiştirilemez.', { durum: 409, kod: 'kapali' });
+      kisiZorunlu(g.kisi, 'etiket_ata', etiket);
+      if (g.sorumlu === undefined && g.hedefTarih === undefined) throw new KuralHatasi('Sorumlu ya da hedef tarih verilmeli.');
+      const sorumlu = g.sorumlu === undefined ? etiket.sorumlu : g.sorumlu === null ? null : sorumluDogrula(g.sorumlu, etiket.renk).kod;
+      const hedef = g.hedefTarih === undefined ? etiket.hedef : hedefDogrula(g.hedefTarih, istanbulGunu(simdi()));
+      if (!store.etiketAta(kum, id, { sorumlu, hedef })) throw new KuralHatasi('Kapalı etiketin sorumlusu değiştirilemez.', { durum: 409, kod: 'kapali' });
       return this.etiketDetay(kum, id);
     },
 
@@ -270,7 +300,13 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
       const durum = ['acik', 'kapali'].includes(q.durum) ? q.durum : undefined;
       const renk = RENKLER[q.renk] ? q.renk : undefined;
       if (q.ekipman) ekipmanZorunlu(q.ekipman);
-      return { etiketler: store.etiketler(kum, { durum, renk, ekipman: q.ekipman || undefined, limit: 200 }).map(etiketGorunumu) };
+      if (q.sorumlu && !kisiBul(q.sorumlu)) throw new KuralHatasi('Sorumlu kişi tanınmıyor.');
+      const geciken = q.geciken === true || q.geciken === 'true' || q.geciken === '1';
+      return {
+        etiketler: store.etiketler(kum, {
+          durum, renk, ekipman: q.ekipman || undefined, sorumlu: q.sorumlu || undefined, gecikenBugun: geciken ? istanbulGunu(simdi()) : undefined, limit: 200,
+        }).map(etiketGorunumu),
+      };
     },
 
     /** Fotoğraf: yalnız JPEG (arayüz telefonda küçültüp JPEG'e çevirir), en çok 1,5 MB. Başlık baytları denetlenir. */
@@ -409,7 +445,14 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
         uyum: { oran: uyum.oran, beklenen: uyum.beklenen, yapilan: uyum.yapilan },
         bugunUyum: { oran: bugunUyum.oran, eksik: bugunUyum.ekipmanlar.filter((x) => x.eksik.length).map((x) => ({ kod: x.kod, vardiyalar: x.eksik })) },
         ekipmanUyum: uyum.ekipmanlar.map(({ kod, beklenen, yapilan }) => ({ kod, ad: ekipmanBul(kod)?.ad, beklenen, yapilan, oran: beklenen ? Math.round((yapilan / beklenen) * 1000) / 1000 : null })),
-        acik: { kirmizi: acik.filter((e) => e.renk === 'kirmizi').length, beyaz: acik.filter((e) => e.renk === 'beyaz').length, durus: acik.filter((e) => e.durus).length },
+        acik: {
+          kirmizi: acik.filter((e) => e.renk === 'kirmizi').length, beyaz: acik.filter((e) => e.renk === 'beyaz').length, durus: acik.filter((e) => e.durus).length,
+          geciken: acik.filter((e) => geciktiMi(e, bugun)).length, sorumsuzKirmizi: acik.filter((e) => e.renk === 'kirmizi' && !e.sorumlu).length,
+        },
+        /** Sorumlu başına açık ve geciken etiket: iş kimde birikiyor? */
+        sorumluYuku: [...Map.groupBy(acik.filter((e) => e.sorumlu), (e) => e.sorumlu)].map(([kod, l]) => ({
+          kod, ad: kisiBul(kod)?.ad ?? kod, acik: l.length, geciken: l.filter((e) => geciktiMi(e, bugun)).length,
+        })).sort((x, y) => y.geciken - x.geciken || y.acik - x.acik),
         donemEtiket: { kirmizi: etiketler.filter((e) => e.renk === 'kirmizi').length, beyaz: etiketler.filter((e) => e.renk === 'beyaz').length },
         ortKapanmaSaat: { kirmizi: kapanmaSaat('kirmizi'), beyaz: kapanmaSaat('beyaz') },
         sikMaddeler: [...maddeler.entries()].sort((x, y) => y[1] - x[1]).slice(0, 8).map(([k, n]) => {
@@ -417,6 +460,7 @@ export function servisOlustur({ store, ana, ariza, pusula, analiz = { acik: fals
           return { ekipman, ekipmanAd: ekipmanBul(ekipman)?.ad, madde, metin: listeBul(ekipmanBul(ekipman)?.tip).find((m) => m.kod === madde)?.metin, adet: n };
         }),
         enEskiAcik: acik.slice().sort((x, y) => x.olusturma - y.olusturma).slice(0, 5).map(etiketGorunumu),
+        gecikenler: acik.filter((e) => geciktiMi(e, bugun)).sort((x, y) => x.hedef.localeCompare(y.hedef)).slice(0, 10).map(etiketGorunumu),
       };
     },
   };

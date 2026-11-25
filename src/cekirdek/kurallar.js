@@ -21,13 +21,28 @@ const SIRA = { 3: 0, 1: 1, 2: 2 };
  *   kontrol ve etiket açma: herkes
  *   beyaz etiket kapatma: herkes (operatör kendisi giderir; TPM'in amacı)
  *   kırmızı etiket kapatma: teknisyen ve şef
+ *   sorumlu atama ve hedef tarih değiştirme: teknisyen ve şef
  */
 export function yetkiliMi(kisi, eylem, etiket = null) {
   if (!kisi) return false;
   if (eylem === 'kontrol' || eylem === 'etiket_ac') return ['operator', 'teknisyen', 'sef'].includes(kisi.rol);
   if (eylem === 'etiket_kapat') return etiket?.renk === 'beyaz' ? ['operator', 'teknisyen', 'sef'].includes(kisi.rol) : ['teknisyen', 'sef'].includes(kisi.rol);
+  if (eylem === 'etiket_ata') return ['teknisyen', 'sef'].includes(kisi.rol);
   return false;
 }
+
+/**
+ * Etiketin sorumlusu olabilir mi? Kırmızı etiketi bakım ekibi (teknisyen) giderir; beyazı herkes (operatör kendisi giderir).
+ * Şef sorumlu yapılmaz: şef işi dağıtır, kendisi gidermez.
+ */
+export const sorumluOlabilirMi = (kisi, renk) => !!kisi && (renk === 'kirmizi' ? kisi.rol === 'teknisyen' : ['operator', 'teknisyen'].includes(kisi.rol));
+
+/** Hedef tarih verilmezse: ekipmanı durduran kırmızı ertesi gün, diğer kırmızı 3 gün, beyaz 7 gün içinde kapanmalı. */
+export const HEDEF_GUN = { durus: 1, kirmizi: 3, beyaz: 7 };
+export const varsayilanHedef = (renk, durus, acilisGunu) => gunEkle(acilisGunu, durus ? HEDEF_GUN.durus : HEDEF_GUN[renk]);
+
+/** Açık etiketin hedef günü geçtiyse gecikmiştir (hedef günü içinde kapanan gecikmiş sayılmaz). */
+export const geciktiMi = (etiket, bugun) => etiket.durum === 'acik' && !!etiket.hedef && etiket.hedef < bugun;
 
 /**
  * Kontrol uyumu: beklenen (ekipman × vardiya) çiftlerinden kaçında kontrol yapıldı?

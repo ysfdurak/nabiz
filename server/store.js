@@ -8,19 +8,19 @@
 //   etiket  : kırmızı/beyaz etiketler
 //   foto    : etiket fotoğrafı (JPEG, en çok 1,5 MB)
 //   durus   : elle kaydedilen duruşlar (V2: 6 büyük kayıp; Arıza Defteri'ne de gider)
-//   giden   : Pusula ve Arıza Defteri'ne gidecek istekler (kuyruk; hata olursa yeniden denenir). Bir etikete ya da duruşa bağlıdır.
+//   giden   : Arıza Defteri'ne gidecek istekler (kuyruk; hata olursa yeniden denenir). Bir etikete ya da duruşa bağlıdır.
 //   sayac   : günlük kullanım sınırları
 //   oturum  : kurum modunda giriş oturumları (anahtarın kendisi değil, özeti)
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes } from 'node:crypto';
 
 const kimlik = (onek) => `${onek}-${randomBytes(6).toString('hex')}`;
-const ETIKET_SUTUNLARI = 'id, kum, ekipman, renk, madde, tur, aciklama, kisi, olusturma, durus, durum, kapatan, kapanis, kapatma_notu, foto, pusula_is, ariza_id, kontrol';
+const ETIKET_SUTUNLARI = 'id, kum, ekipman, renk, madde, tur, aciklama, kisi, olusturma, durus, durum, kapatan, kapanis, kapatma_notu, foto, sorumlu, hedef, ariza_id, kontrol';
 
 const etiketNesnesi = (s) => s && ({
   id: s.id, ekipman: s.ekipman, renk: s.renk, madde: s.madde, tur: s.tur, aciklama: s.aciklama, kisi: s.kisi,
   olusturma: s.olusturma, durus: !!s.durus, durum: s.durum, kapatan: s.kapatan, kapanis: s.kapanis, kapatmaNotu: s.kapatma_notu,
-  foto: !!s.foto, pusulaIs: s.pusula_is, arizaId: s.ariza_id, kontrol: s.kontrol,
+  foto: !!s.foto, sorumlu: s.sorumlu, hedef: s.hedef, arizaId: s.ariza_id, kontrol: s.kontrol,
 });
 const kontrolNesnesi = (s) => s && ({
   id: s.id, ekipman: s.ekipman, kisi: s.kisi, gun: s.gun, vardiya: s.vardiya, baslangic: s.baslangic, bitis: s.bitis,
@@ -43,7 +43,8 @@ export function openStore(dosya) {
       id TEXT PRIMARY KEY, kum TEXT NOT NULL REFERENCES kum(id) ON DELETE CASCADE, ekipman TEXT NOT NULL,
       renk TEXT NOT NULL CHECK (renk IN ('kirmizi', 'beyaz')), madde TEXT, tur TEXT, aciklama TEXT NOT NULL, kisi TEXT NOT NULL,
       olusturma INTEGER NOT NULL, durus INTEGER NOT NULL DEFAULT 0, durum TEXT NOT NULL CHECK (durum IN ('acik', 'kapali')),
-      kapatan TEXT, kapanis INTEGER, kapatma_notu TEXT, foto INTEGER NOT NULL DEFAULT 0, pusula_is TEXT, ariza_id TEXT, kontrol TEXT);
+      kapatan TEXT, kapanis INTEGER, kapatma_notu TEXT, foto INTEGER NOT NULL DEFAULT 0,
+      sorumlu TEXT, hedef TEXT, ariza_id TEXT, kontrol TEXT);
     CREATE INDEX IF NOT EXISTS etiket_kum ON etiket (kum, durum, olusturma);
     CREATE TABLE IF NOT EXISTS foto (etiket TEXT PRIMARY KEY REFERENCES etiket(id) ON DELETE CASCADE, kum TEXT NOT NULL, veri BLOB NOT NULL, boyut INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS durus (
@@ -74,8 +75,8 @@ export function openStore(dosya) {
   }
 
   const kontrolYaz = db.prepare('INSERT INTO kontrol (id, kum, ekipman, kisi, gun, vardiya, baslangic, bitis, sonuc, nok_sayisi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  const etiketYaz = db.prepare(`INSERT INTO etiket (id, kum, ekipman, renk, madde, tur, aciklama, kisi, olusturma, durus, durum, kapatan, kapanis, kapatma_notu, kontrol)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const etiketYaz = db.prepare(`INSERT INTO etiket (id, kum, ekipman, renk, madde, tur, aciklama, kisi, olusturma, durus, durum, kapatan, kapanis, kapatma_notu, kontrol, sorumlu, hedef)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const kontrolEkle = (kum, k) => {
     const id = kimlik('K');
     kontrolYaz.run(id, kum, k.ekipman, k.kisi, k.gun, k.vardiya, k.baslangic, k.bitis, JSON.stringify(k.sonuc), k.sonuc.filter((s) => s.durum === 'nok').length);
@@ -84,7 +85,7 @@ export function openStore(dosya) {
   const etiketEkle = (kum, e) => {
     const id = kimlik('E');
     etiketYaz.run(id, kum, e.ekipman, e.renk, e.madde ?? null, e.tur ?? null, e.aciklama, e.kisi, e.olusturma, e.durus ? 1 : 0, e.durum ?? 'acik',
-      e.kapatan ?? null, e.kapanis ?? null, e.kapatmaNotu ?? null, e.kontrol ?? null);
+      e.kapatan ?? null, e.kapanis ?? null, e.kapatmaNotu ?? null, e.kontrol ?? null, e.sorumlu ?? null, e.hedef ?? null);
     return id;
   };
 
@@ -126,23 +127,28 @@ export function openStore(dosya) {
     // --- etiketler -----------------------------------------------------------------------------
     etiketEkle,
     etiketBul: (kum, id) => etiketNesnesi(db.prepare(`SELECT ${ETIKET_SUTUNLARI} FROM etiket WHERE kum = ? AND id = ?`).get(kum, id)),
-    etiketler(kum, { durum, renk, ekipman, bas, limit = 500 } = {}) {
+    etiketler(kum, { durum, renk, ekipman, bas, sorumlu, gecikenBugun, limit = 500 } = {}) {
       const k = ['kum = ?'];
       const d = [kum];
       if (durum) { k.push('durum = ?'); d.push(durum); }
       if (renk) { k.push('renk = ?'); d.push(renk); }
       if (ekipman) { k.push('ekipman = ?'); d.push(ekipman); }
       if (bas != null) { k.push('olusturma >= ?'); d.push(bas); }
+      if (sorumlu) { k.push('sorumlu = ?'); d.push(sorumlu); }
+      if (gecikenBugun) { k.push("durum = 'acik' AND hedef < ?"); d.push(gecikenBugun); }
       return db.prepare(`SELECT ${ETIKET_SUTUNLARI} FROM etiket WHERE ${k.join(' AND ')} ORDER BY olusturma DESC LIMIT ${Math.min(2000, Math.max(1, limit))}`).all(...d).map(etiketNesnesi);
     },
     /** Yalnız açık etiket kapanır; döner: değişen satır sayısı (0 = zaten kapalı ya da yok). */
     etiketKapat: (kum, id, { kapatan, kapanis, not }) => Number(db.prepare(
       "UPDATE etiket SET durum = 'kapali', kapatan = ?, kapanis = ?, kapatma_notu = ? WHERE kum = ? AND id = ? AND durum = 'acik'",
     ).run(kapatan, kapanis, not, kum, id).changes),
-    etiketBaglanti(kum, id, { pusulaIs, arizaId }) {
-      if (pusulaIs !== undefined) db.prepare('UPDATE etiket SET pusula_is = ? WHERE kum = ? AND id = ?').run(pusulaIs, kum, id);
-      if (arizaId !== undefined) db.prepare('UPDATE etiket SET ariza_id = ? WHERE kum = ? AND id = ?').run(arizaId, kum, id);
+    etiketBaglanti(kum, id, { arizaId }) {
+      db.prepare('UPDATE etiket SET ariza_id = ? WHERE kum = ? AND id = ?').run(arizaId, kum, id);
     },
+    /** Yalnız açık etiketin sorumlusu ve hedefi değişir; döner: değişen satır sayısı. */
+    etiketAta: (kum, id, { sorumlu, hedef }) => Number(db.prepare(
+      "UPDATE etiket SET sorumlu = ?, hedef = ? WHERE kum = ? AND id = ? AND durum = 'acik'",
+    ).run(sorumlu, hedef, kum, id).changes),
 
     // --- fotoğraf ------------------------------------------------------------------------------
     fotoYaz(kum, etiket, veri) {

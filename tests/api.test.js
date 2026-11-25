@@ -9,7 +9,7 @@ import { loadConfig, kok } from '../server/config.js';
 import { openStore } from '../server/store.js';
 import { createApp } from '../server/app.js';
 import { anaVeriKaynagi } from '../server/ana-veri.js';
-import { arizaDefteriIstemcisi, pusulaIstemcisi } from '../server/entegrasyon.js';
+import { arizaDefteriIstemcisi } from '../server/entegrasyon.js';
 import { ornekGecmis } from '../src/cekirdek/ornek.js';
 import { anMs } from '../src/cekirdek/zaman.js';
 
@@ -23,9 +23,8 @@ async function kur(ek = {}) {
   assert.deepEqual(config.errors, []);
   const store = openStore(join(config.dataDir, 'n.db'));
   const ariza = arizaDefteriIstemcisi({});
-  const pusula = pusulaIstemcisi({});
   const ana = anaVeriKaynagi({ store, ariza, kok });
-  const app = createApp({ config, store, ana: ana.al, ariza, pusula, simdi: () => SIMDI });
+  const app = createApp({ config, store, ana: ana.al, ariza, simdi: () => SIMDI });
   app.ornekKaynagi(() => ornekGecmis(ana.al(), SIMDI));
   const server = createServer(app.handle);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
@@ -93,19 +92,68 @@ test('kırmızı etiket: benzetim gönderimleri; operatör kapatamaz, teknisyen 
     assert.equal((await a('/v1/etiket', { json: { ekipman: 'RT-03', renk: 'kirmizi', aciklama: 'x', kisi: 'K-O01', tur: 'FL-HID' } })).durum, 400, 'tür ekipmana ait değil');
     const e = await a('/v1/etiket', { json: { ekipman: 'RT-03', renk: 'kirmizi', madde: 'hidrolik', aciklama: 'Direkte yağ', kisi: 'K-O01', durus: true } });
     assert.equal(e.durum, 201);
-    assert.deepEqual(e.govde.gonderimler.map((g) => [g.hedef, g.durum]), [['pusula_ac', 'benzetim'], ['ariza_bildir', 'benzetim']]);
-    assert.match(e.govde.gonderimler[0].govde.baslik, /^\[Kırmızı etiket\] RT-03/);
-    assert.equal(e.govde.gonderimler[1].govde.tur, 'RT-HID');
+    assert.deepEqual(e.govde.gonderimler.map((g) => [g.hedef, g.durum]), [['ariza_bildir', 'benzetim']], 'yalnız Arıza Defteri; Pusula\'ya gitmez');
+    assert.equal(e.govde.gonderimler[0].govde.tur, 'RT-HID');
+    assert.equal(e.govde.hedef, '2026-11-25', 'ekipmanı durduran kırmızı: ertesi gün');
+    assert.equal(e.govde.sorumlu, null, 'kırmızı etiketin sorumlusu sonra atanır');
     const k1 = await a(`/v1/etiket/${e.govde.id}/kapat`, { json: { kisi: 'K-O01', not: 'x' } });
     assert.equal(k1.durum, 403);
     const k2 = await a(`/v1/etiket/${e.govde.id}/kapat`, { json: { kisi: 'K-SAYDIN', not: 'Conta değişti' } });
     assert.equal(k2.durum, 200);
     assert.equal(k2.govde.durum, 'kapali');
-    assert.deepEqual(k2.govde.gonderimler.map((g) => g.hedef), ['pusula_ac', 'ariza_bildir', 'pusula_kapat', 'ariza_kapat']);
+    assert.deepEqual(k2.govde.gonderimler.map((g) => g.hedef), ['ariza_bildir', 'ariza_kapat']);
     assert.equal((await a(`/v1/etiket/${e.govde.id}/kapat`, { json: { kisi: 'K-SAYDIN', not: 'tekrar' } })).durum, 409);
     const beyaz = await a('/v1/etiket', { json: { ekipman: 'FL-01', renk: 'beyaz', aciklama: 'soket gevşek', kisi: 'K-O02' } });
     assert.equal(beyaz.govde.gonderimler.length, 0, 'beyaz etiket hiçbir yere gitmez');
+    assert.equal(beyaz.govde.sorumlu, 'K-O02', 'beyazın sorumlusu açan operatör');
+    assert.equal(beyaz.govde.hedef, '2026-12-01', 'beyaz: 7 gün');
     assert.equal((await a(`/v1/etiket/${beyaz.govde.id}/kapat`, { json: { kisi: 'K-O02', not: 'sıkıldı' } })).durum, 200, 'operatör beyazı kapatır');
+  } finally { await kapat(); }
+});
+
+test('sorumlu ve hedef tarih: kurallar, atama yetkisi, gecikme, filtreler ve özet', async () => {
+  const { tarayici, kapat } = await kur();
+  try {
+    const a = tarayici();
+    await a('/v1/baslangic');
+    const ac = (g) => a('/v1/etiket', { json: { ekipman: 'SR-01', renk: 'kirmizi', aciklama: 'klape geç açılıyor', kisi: 'K-O01', ...g } });
+    assert.equal((await ac({ sorumlu: 'K-O02' })).durum, 400, 'kırmızının sorumlusu teknisyen olmalı');
+    assert.equal((await ac({ sorumlu: 'K-AKOC' })).durum, 400, 'şef sorumlu yapılmaz');
+    assert.equal((await ac({ hedefTarih: '2026-11-23' })).durum, 400, 'geçmiş tarih olmaz');
+    assert.equal((await ac({ hedefTarih: '2027-11-24' })).durum, 400, 'yanlış yıl yakalanır (en çok 90 gün)');
+    assert.equal((await ac({ hedefTarih: '24.11.2026' })).durum, 400);
+    const e = await ac({ sorumlu: 'K-MKAYA', hedefTarih: '2026-11-24' });
+    assert.equal(e.durum, 201);
+    assert.equal(e.govde.sorumluAd, 'Murat Kaya');
+    assert.equal(e.govde.gecikti, false, 'hedef günü içinde gecikmiş sayılmaz');
+    const varsayilan = await ac({});
+    assert.equal(varsayilan.govde.hedef, '2026-11-27', 'kırmızı: 3 gün');
+    const yol = `/v1/etiket/${varsayilan.govde.id}/ata`;
+    assert.equal((await a(yol, { json: { kisi: 'K-O01', sorumlu: 'K-SAYDIN' } })).durum, 403, 'operatör atayamaz');
+    assert.equal((await a(yol, { json: { kisi: 'K-AKOC' } })).durum, 400, 'boş istek');
+    const at = await a(yol, { json: { kisi: 'K-AKOC', sorumlu: 'K-SAYDIN', hedefTarih: '2026-11-26' } });
+    assert.equal(at.durum, 200);
+    assert.deepEqual([at.govde.sorumlu, at.govde.hedef], ['K-SAYDIN', '2026-11-26']);
+    const kaldir = await a(yol, { json: { kisi: 'K-SAYDIN', sorumlu: null } });
+    assert.deepEqual([kaldir.govde.sorumlu, kaldir.govde.hedef], [null, '2026-11-26'], 'yalnız verilen alan değişir');
+
+    // Gecikme: hedef tarih geçmişe girilemez (kural), bu yüzden ziyaretçi alanına yüklenen 7 günlük örnek geçmişteki
+    // açık etiketlere bakılır.
+    const tum = await a('/v1/etiket?durum=acik');
+    const geciken = await a('/v1/etiket?durum=acik&geciken=1');
+    assert.ok(geciken.govde.etiketler.length >= 1, 'örnek veride geciken etiket olmalı (vitrin bunu gösterir)');
+    assert.ok(geciken.govde.etiketler.every((x) => x.gecikti && x.gecikmeGun >= 1));
+    assert.equal(geciken.govde.etiketler.length, tum.govde.etiketler.filter((x) => x.gecikti).length);
+    const benim = await a('/v1/etiket?durum=acik&sorumlu=K-MKAYA');
+    assert.ok(benim.govde.etiketler.some((x) => x.id === e.govde.id) && benim.govde.etiketler.every((x) => x.sorumlu === 'K-MKAYA'));
+    assert.equal((await a('/v1/etiket?sorumlu=K-YOK')).durum, 400);
+    const o = await a('/v1/ozet');
+    assert.equal(o.govde.acik.geciken, geciken.govde.etiketler.length);
+    assert.equal(o.govde.acik.sorumsuzKirmizi, tum.govde.etiketler.filter((x) => x.renk === 'kirmizi' && !x.sorumlu).length);
+    assert.ok(o.govde.sorumluYuku.find((x) => x.kod === 'K-MKAYA').acik >= 1);
+    const kapandi = await a(`/v1/etiket/${e.govde.id}/kapat`, { json: { kisi: 'K-MKAYA', not: 'Klape ayarlandı' } });
+    assert.equal(kapandi.durum, 200);
+    assert.equal((await a(`/v1/etiket/${e.govde.id}/ata`, { json: { kisi: 'K-AKOC', sorumlu: 'K-SAYDIN' } })).durum, 409, 'kapalı etiket atanmaz');
   } finally { await kapat(); }
 });
 

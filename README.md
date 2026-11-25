@@ -3,7 +3,9 @@
 Depo ekipmanı için **TPM (Toplam Verimli Bakım)** uygulaması. Telefonla kullanılır. Operatör ekipmanın üzerindeki QR kodu okutur ve vardiya başı otonom bakım kontrolünü 1-2 dakikada yapar. Gördüğü sorunu etiketler:
 
 - **Beyaz etiket:** Sorunu operatör kendisi giderir (temizlik, sıkma, akü değişimi) ve etiketi kendisi kapatır.
-- **Kırmızı etiket:** Bakım ekibi gerekir. Etiket [Pusula](https://github.com/ysfdurak/pusula-is-takip)'da iş olarak açılır. "Ekipman çalışamıyor" işaretliyse [Arıza Defteri](https://github.com/ysfdurak/ariza-defteri)'ne arıza olarak da düşer. Teknisyen etiketi kapatınca iş de arıza kaydı da kapanır.
+- **Kırmızı etiket:** Bakım ekibi gerekir. Etiket bakım ekibinin listesine düşer; şef ya da teknisyen bir sorumlu atar. "Ekipman çalışamıyor" işaretliyse [Arıza Defteri](https://github.com/ysfdurak/ariza-defteri)'ne arıza olarak da düşer. Teknisyen etiketi kapatınca arıza kaydı da kapanır.
+
+Her etiketin bir **sorumlusu** ve **hedef tarihi** vardır. Tarih verilmezse kurala göre konur: duran ekipman 1 gün, kırmızı 3 gün, beyaz 7 gün. Hedefi geçen açık etiket "gecikti" olur ve Özet'te görünür.
 
 Ticari olmayan bir portföy projesidir. Arayüz Türkçedir. Demo veri sentetiktir: kurgusal Yıldız Ev & Yaşam deposu.
 
@@ -16,8 +18,9 @@ Ticari olmayan bir portföy projesidir. Arayüz Türkçedir. Demo veri sentetikt
 - **QR → ekipman kartı.** Her ekipmanın QR kodu (`#/e/RT-03`) yazdırılabilir sayfada hazır durur. Telefon kamerası yeterlidir, uygulama içinde tarayıcı gerekmez.
 - **Kontrol listesi:** Tipine göre 4-6 madde, her biri "tamam" ya da "sorun var". Sorunlu madde etiket açmaya götürür; rengi ve arıza türü önerilir.
 - **Fotoğraf:** Telefonda 1280 piksele küçültülür ve JPEG'e çevrilir. Sunucu yalnız JPEG kabul eder, en çok 1,5 MB, başlık baytlarını da denetler.
-- **Gönderim kuyruğu:** Pusula ya da Arıza Defteri o an cevap vermezse gönderim kaybolmaz. 1, 5, 15 ve 60 dakika arayla yeniden denenir. Durumu etiket sayfasında görünür.
-- **Özet:** Kontrol uyumu (bugün, 7 gün, 30 gün), eksik kontroller, açık etiketler, ortalama kapanma süresi ve en sık sorunlu maddeler.
+- **Takip:** Geciken etiketler, "bana atanan" listesi, sorumlu başına açık iş. İş takibi için ayrı bir sisteme kayıt taşınmaz; arızanın tek kaynağı Arıza Defteri'dir.
+- **Gönderim kuyruğu:** Arıza Defteri o an cevap vermezse gönderim kaybolmaz. 1, 5, 15 ve 60 dakika arayla yeniden denenir. Durumu etiket sayfasında görünür.
+- **Özet:** Kontrol uyumu (bugün, 7 gün, 30 gün), eksik kontroller, açık ve geciken etiketler, sorumlu başına iş, ortalama kapanma süresi ve en sık sorunlu maddeler.
 - **Demo:** Her ziyaretçi kendi deneme alanında çalışır. Alan örnek 7 günlük geçmişle açılır ve 72 saat sonra silinir. Gönderimler gerçek sisteme gitmez, "gidecek içerik" olarak gösterilir.
 - **Duruş kaydı (V2):** Arıza dışındaki kayıplar da (ayar, küçük duruş, hız, kalite) telefondan girilir ve Arıza Defteri'ne gider.
 - **Kayıp ve OEE (V2):** Depo, tip, ekipman ve gün bazında OEE (kullanılabilirlik × performans × kalite), kayıp şelalesi, 6 büyük kayıp, Pareto.
@@ -28,10 +31,10 @@ Ticari olmayan bir portföy projesidir. Arayüz Türkçedir. Demo veri sentetikt
 ## Yapı
 
 ```
-src/cekirdek/  kontrol listeleri · kurallar (vardiya, yetki, uyum) · örnek geçmiş
+src/cekirdek/  kontrol listeleri · kurallar (vardiya, yetki, uyum, hedef ve gecikme) · örnek geçmiş · OEE · A3
 server/        servis (kurallar) ─┬─ web kapısı /v1 ─▶ telefon arayüzü (web/)
                                   └─ MCP kapısı /mcp ─▶ Claude (salt okuma)
-               store (SQLite, alanlar) · entegrasyon (Arıza Defteri API, Pusula MCP, giden kutusu) · ana-veri (önbellekli)
+               store (SQLite, alanlar) · entegrasyon (Arıza Defteri API, Nabız Analiz, giden kutusu) · ana-veri (önbellekli)
 ```
 
 Ekipman, kişi ve arıza türü listeleri Arıza Defteri'nden gelir. OEE ve kayıp verisi de oradan, güvenilirlik Nabız Analiz'den. Ona ulaşılamazsa son okunan liste, o da yoksa depodaki kopya (`veri/ana-veriler.json`) kullanılır.
@@ -43,15 +46,15 @@ Node.js 22.13 ya da üstü gerekir.
 ```bash
 npm install
 npm run start:dev      # http://localhost:8081 (bağlantısız: gönderimler benzetim)
-npm test               # kurallar, giden kutusu, Pusula istemcisi, API, MCP
+npm test               # kurallar, giden kutusu, API, MCP, V2
 ```
 
-Arıza Defteri ve Pusula ile birlikte denemek için: [docs/SUNUCU_KURULUMU.md](docs/SUNUCU_KURULUMU.md) → "Yerelde üçü birlikte".
+Arıza Defteri ve Nabız Analiz ile birlikte denemek için: [docs/SUNUCU_KURULUMU.md](docs/SUNUCU_KURULUMU.md) → "Yerelde üçü birlikte".
 
 ## Belgeler
 
 - [Proje dokümanı](docs/PROJE.md): kararlar, mimari, kod turu, testler, mülakat soruları
-- [Sunucu kurulumu](docs/SUNUCU_KURULUMU.md): nabiz.ysfdurak.com, Pusula hizmet hesabı, kurum modu
+- [Sunucu kurulumu](docs/SUNUCU_KURULUMU.md): nabiz.ysfdurak.com, kurum modu
 
 ## Lisans
 

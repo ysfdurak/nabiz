@@ -21,7 +21,7 @@ jobs:
           cache: npm
       - name: Bağımlılıkları kur (kilit dosyasına sadık)
         run: npm ci
-      - name: Testler (kurallar, giden kutusu, Pusula istemcisi, API, MCP)
+      - name: Testler (kurallar, giden kutusu, API, MCP, V2)
         run: npm test
       # V2 ekranları (Kayıp, Analiz, A3) gerçek Arıza Defteri ve Nabız Analiz ister: ikisi de açık depo, burada ayağa kalkar.
       - name: Arıza Defteri ve Nabız Analiz depolarını al

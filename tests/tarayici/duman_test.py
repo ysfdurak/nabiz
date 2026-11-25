@@ -54,11 +54,14 @@ with sync_playwright() as p:
         s.set_input_files("#foto", str(foto))
         s.wait_for_selector(".onizleme:not(.gizli)")
         s.check("#durus")
+        assert s.locator("#sorumlu option").count() == 7, "kırmızı: 'sonra atanacak' + 6 teknisyen"
         s.screenshot(path=str(cikti / "etiket-ac.png"), full_page=True)
         s.get_by_role("button", name="Etiketi aç").click()
         s.wait_for_selector("text=Bağlı sistemler")
         s.wait_for_selector("img.foto")
-        assert s.locator("text=Benzetim").count() == 2, "iki gönderim benzetim olmalı"
+        assert s.locator("text=Benzetim").count() == 1, "yalnız Arıza Defteri gönderimi (benzetim)"
+        assert s.locator("text=Pusula").count() == 0, "Pusula bağlantısı kaldırıldı"
+        assert s.locator("text=Sorumluyu ve hedef tarihi teknisyen ya da şef değiştirir").count() == 1
         s.screenshot(path=str(cikti / "etiket.png"), full_page=True)
         # Görsel yavaş makinede (CI) geç yüklenir; yüklenene kadar bekle (wait_for_function CSP'ye takılır)
         genislik = 0
@@ -71,10 +74,22 @@ with sync_playwright() as p:
         # Operatör kırmızıyı kapatamaz; teknisyene geç ve kapat
         assert s.locator("text=Kırmızı etiketi teknisyen ya da şef kapatır").count() == 1
         s.click("#kisi-dugme"); s.get_by_role("button", name="Serkan Aydın").click()
-        s.wait_for_selector("textarea")
+        s.wait_for_selector("form.ata select")
+        # Teknisyen sorumlu atar ve hedefi değiştirir
+        s.select_option("form.ata select", "K-SAYDIN")
+        s.get_by_role("button", name="Kaydet").click()
+        s.wait_for_selector("text=Sorumlu ve hedef kaydedildi")
+        s.wait_for_selector("dd:has-text('Serkan Aydın')")
+        s.screenshot(path=str(cikti / "etiket-ata.png"), full_page=True)
+        s.wait_for_selector("form.kapat textarea")
         s.fill("form.kapat textarea", "Hortum değiştirildi")
         s.get_by_role("button", name="Kapat", exact=True).click()
         s.wait_for_selector("text=Kapatan")
+        s.goto(adres + "#/etiketler?durum=acik&renk=&ek=geciken")
+        s.wait_for_selector("h1:has-text('Etiketler')")
+        s.wait_for_selector(".liste .satir")
+        assert s.locator(".rozet:has-text('gecikti')").count() >= 1, "vitrin örneğinde geciken etiket görünmeli"
+        s.screenshot(path=str(cikti / "etiketler-geciken.png"))
         s.goto(adres + "#/etiketler?durum=acik&renk=kirmizi")
         s.wait_for_selector("h1:has-text('Etiketler')")
         s.screenshot(path=str(cikti / "etiketler.png"))
@@ -99,6 +114,7 @@ with sync_playwright() as p:
         s.screenshot(path=str(cikti / "a3.png"), full_page=True)
         s.goto(adres + "#/ozet")
         s.wait_for_selector(".kpi")
+        s.wait_for_selector("h2:has-text('Sorumlu başına açık iş')")
         s.screenshot(path=str(cikti / "ozet.png"), full_page=True)
         s.goto(adres + "#/qr")
         s.wait_for_selector(".qr img")

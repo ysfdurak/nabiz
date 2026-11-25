@@ -13,7 +13,7 @@ export const MCP_ARAC_ADLARI = ['ekipman_durumu', 'etiketleri_listele', 'etiket_
 
 const TALIMAT = `Nabız, Yıldız Ev & Yaşam deposunun TPM (Toplam Verimli Bakım) uygulamasıdır.
 Operatörler vardiya başında ekipmanı kontrol eder (otonom bakım), sorunu etiketler: kırmızı = bakım ekibi gerekir, beyaz = operatör kendisi giderir.
-Kırmızı etiketler Pusula'da iş açar; "ekipman çalışamıyor" işaretliyse Arıza Defteri'ne arıza düşer.
+Her etiketin sorumlusu ve hedef tarihi vardır; hedefi geçmiş açık etiket "gecikti" sayılır. "Ekipman çalışamıyor" işaretliyse Arıza Defteri'ne arıza düşer.
 V2: OEE ve 6 büyük kayıp (oee_ve_kayiplar), güvenilirlik ve bakım aralığı (guvenilirlik), A3 taslağı (a3_taslagi). "Neden sık arıza" sorusunda önce guvenilirlik ve oee_ve_kayiplar'a bak.
 Araçlar salt okumadır. Kontrol ve etiket kaydını sahadaki kişi telefondan yapar.`;
 
@@ -22,18 +22,20 @@ export function createMcpHandler({ servis, log = () => {} }) {
   const ARACLAR = [
     ['ekipman_durumu', 'Bu vardiyada her ekipmanın kontrolü yapıldı mı, sorunlu madde sayısı ve açık kırmızı/beyaz etiketleri.', {},
       () => servis.ekipmanlar(KUM)],
-    ['etiketleri_listele', 'Etiketler (yeniden eskiye). Filtreler isteğe bağlı.', {
+    ['etiketleri_listele', 'Etiketler (yeniden eskiye): sorumlu, hedef tarih ve gecikme dahil. Filtreler isteğe bağlı; "geciken" ile yalnız hedefi geçmiş açık etiketler.', {
       durum: z.enum(['acik', 'kapali']).optional(),
       renk: z.enum(['kirmizi', 'beyaz']).optional(),
       ekipman: z.string().max(10).optional().describe('Ekipman kodu, ör. RT-03.'),
+      sorumlu: z.string().max(12).optional().describe('Sorumlu kişi kodu, ör. K-MKAYA.'),
+      geciken: z.boolean().optional().describe('true: yalnız hedef tarihi geçmiş açık etiketler.'),
     }, (a) => servis.etiketler(KUM, a)],
-    ['etiket_detayi', 'Tek etiket: açıklama, kim açtı/kapattı, Pusula ve Arıza Defteri gönderimlerinin durumu.', {
+    ['etiket_detayi', 'Tek etiket: açıklama, kim açtı/kapattı, sorumlu ve hedef tarih, Arıza Defteri gönderimlerinin durumu.', {
       id: z.string().max(20).describe('Etiket kimliği, ör. E-1a2b3c4d5e6f.'),
     }, (a) => servis.etiketDetay(KUM, a.id)],
     ['ekipman_karti', 'Tek ekipman: kontrol listesi, bu vardiyanın kontrolü, son kontroller, açık/kapanan etiketler, Arıza Defteri\'ndeki son arızalar.', {
       kod: z.string().max(10).describe('Ekipman kodu, ör. FL-01.'),
     }, (a) => servis.ekipmanKarti(KUM, a.kod)],
-    ['tpm_ozeti', 'Kontrol uyumu (bugün ve dönem), eksik kontroller, açık etiketler, ortalama kapanma süresi, en sık sorunlu maddeler.', {
+    ['tpm_ozeti', 'Kontrol uyumu (bugün ve dönem), eksik kontroller, açık ve geciken etiketler, sorumlu başına yük, ortalama kapanma süresi, en sık sorunlu maddeler.', {
       gun: z.union([z.literal(1), z.literal(7), z.literal(30)]).optional().describe('Dönem: 1, 7 ya da 30 gün. Varsayılan 7.'),
     }, (a) => servis.ozet(KUM, { gun: a.gun })],
     ['oee_ve_kayiplar', 'OEE (kullanılabilirlik × performans × kalite) depo, tip, ekipman ve gün bazında; 6 büyük kayıp; arıza Pareto\'su. Veri Arıza Defteri\'nden (sentetik).', {

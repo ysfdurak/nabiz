@@ -34,6 +34,12 @@ const depo = {
 };
 const saat = (iso) => (iso ? iso.slice(11, 16) : '');
 const gunSaat = (iso) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)} ${iso.slice(11, 16)}` : '');
+/** Hedef gün (YYYY-AA-GG) → "28.11"; gecikmişse kırmızı rozet. */
+const hedefGun = (g) => (g ? `${g.slice(8, 10)}.${g.slice(5, 7)}` : '');
+const hedefRozeti = (t) => (t.durum !== 'acik' || !t.hedef ? null : t.gecikti ? rozet('kirmizi koyu', `${t.gecikmeGun} gün gecikti`) : rozet('gri', `Hedef ${hedefGun(t.hedef)}`));
+/** Sorumlu olabilecekler: kırmızıda teknisyen, beyazda operatör ve teknisyen (kurallar.js ile aynı). */
+const sorumlular = (renk) => S.kisiler.filter((k) => (renk === 'kirmizi' ? k.rol === 'teknisyen' : ['operator', 'teknisyen'].includes(k.rol)));
+const bugunGun = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());
 const yuzde = (x) => (x == null ? '–' : `%${Math.round(x * 100)}`);
 const yuzde1 = (x) => (x == null ? '–' : `%${(x * 100).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`);
 const sayi = (x, b = 0) => (x == null ? '–' : Number(x).toLocaleString('tr-TR', { maximumFractionDigits: b }));
@@ -47,7 +53,7 @@ function cubuk(oran, sinif = '') {
   return el('span', { class: 'cubuk', 'aria-hidden': 'true' }, ic);
 }
 const ROL = { operator: 'Operatör', teknisyen: 'Teknisyen', sef: 'Vardiya şefi' };
-const HEDEF = { pusula_ac: 'Pusula: iş aç', pusula_kapat: 'Pusula: işi kapat', ariza_bildir: 'Arıza Defteri: arıza bildir', ariza_kapat: 'Arıza Defteri: arızayı kapat' };
+const HEDEF = { ariza_bildir: 'Arıza Defteri: arıza bildir', ariza_kapat: 'Arıza Defteri: arızayı kapat' };
 const GDURUM = { bekliyor: 'Gönderilecek', gonderildi: 'Gönderildi', hata: 'Gönderilemedi', benzetim: 'Benzetim' };
 const ekipmanBul = (kod) => S.ekipmanlar.find((e) => e.kod === kod);
 const kisi = () => S?.kisiler.find((k) => k.kod === depo.oku('nabiz_kisi')) || null;
@@ -122,7 +128,8 @@ async function ekipmanSayfasi() {
                 : rozet('turuncu', 'Kontrol yok'),
             e.acikEtiket.kirmizi ? rozet('kirmizi', `${e.acikEtiket.kirmizi} kırmızı`) : null,
             e.acikEtiket.beyaz ? rozet('beyaz', `${e.acikEtiket.beyaz} beyaz`) : null,
-            e.acikEtiket.durus ? rozet('kirmizi koyu', 'Duruyor') : null))))))),
+            e.acikEtiket.durus ? rozet('kirmizi koyu', 'Duruyor') : null,
+            e.acikEtiket.geciken ? rozet('turuncu', `${e.acikEtiket.geciken} gecikti`) : null))))))),
   );
 }
 
@@ -159,7 +166,9 @@ function etiketListesi(liste) {
   return el('ul', { class: 'liste' }, ...liste.map((t) => el('li', {},
     el('a', { class: 'satir', href: `#/etiket/${t.id}` },
       el('span', { class: 'satir-ana' }, rozet(t.renk, t.renk === 'kirmizi' ? 'Kırmızı' : 'Beyaz'), ' ', el('strong', {}, t.ekipman), ' ', t.aciklama),
-      el('span', { class: 'satir-yan soluk' }, t.durum === 'acik' ? `${gunSaat(t.olusturma)} · ${t.kisiAd}` : `Kapandı ${gunSaat(t.kapanis)} · ${t.kapatanAd}`, t.durus ? rozet('kirmizi koyu', 'Duruyor') : null)))));
+      el('span', { class: 'satir-yan soluk' },
+        t.durum === 'acik' ? `${gunSaat(t.olusturma)} · ${t.sorumluAd ? `Sorumlu: ${t.sorumluAd}` : t.renk === 'kirmizi' ? 'Sorumlu yok' : t.kisiAd}` : `Kapandı ${gunSaat(t.kapanis)} · ${t.kapatanAd}`,
+        ' ', hedefRozeti(t), t.durus ? [' ', rozet('kirmizi koyu', 'Duruyor')] : null)))));
 }
 
 function durusSatiri(d) {
@@ -423,6 +432,17 @@ function etiketAcSayfasi(kod, q) {
   const foto = el('input', { type: 'file', id: 'foto', accept: 'image/*', capture: 'environment' });
   const onizleme = el('img', { class: 'onizleme gizli', alt: 'Seçilen fotoğraf' });
   const durusAlani = el('label', { class: 'onay' }, durus, el('span', {}, 'Ekipman çalışamıyor (Arıza Defteri\'ne arıza olarak da düşer)'));
+  const sorumluSec = el('select', { id: 'sorumlu' });
+  const sorumluAlani = el('div', { class: 'alan' }, el('label', { for: 'sorumlu' }, 'Sorumlu (isteğe bağlı)'), sorumluSec);
+  const hedefTarih = el('input', { type: 'date', id: 'hedef', min: bugunGun() });
+  const hedefAlani = el('div', { class: 'alan' }, el('label', { for: 'hedef' }, 'Hedef tarih (isteğe bağlı)'), hedefTarih,
+    el('small', { class: 'soluk' }, 'Boş bırakırsan: ekipman duruyorsa 1 gün, kırmızı 3 gün, beyaz 7 gün.'));
+  const sorumluDoldur = () => {
+    const onceki = sorumluSec.value;
+    sorumluSec.replaceChildren(el('option', { value: '' }, renk() === 'kirmizi' ? 'Sonra atanacak' : 'Ben gideririm'),
+      ...sorumlular(renk()).map((x) => el('option', { value: x.kod }, `${x.ad} (${ROL[x.rol]})`)));
+    if ([...sorumluSec.options].some((o) => o.value === onceki)) sorumluSec.value = onceki;
+  };
   const gonder = el('button', { type: 'submit', class: 'dugme birincil genis' }, 'Etiketi aç');
   let fotoBlob = null;
 
@@ -431,6 +451,7 @@ function etiketAcSayfasi(kod, q) {
     durusAlani.classList.toggle('gizli', renk() !== 'kirmizi');
     if (renk() !== 'kirmizi') durus.checked = false;
     turAlani.classList.toggle('gizli', !(durus.checked && !maddeSec.value));
+    sorumluDoldur();
   };
   renkSecimi.forEach((r) => r.querySelector('input').addEventListener('change', alanlariGuncelle));
   durus.addEventListener('change', alanlariGuncelle);
@@ -462,6 +483,7 @@ function etiketAcSayfasi(kod, q) {
       const t = await api('/v1/etiket', { method: 'POST', govde: {
         ekipman: kod, renk: renk(), madde: maddeSec.value || null, aciklama: aciklama.value, kisi: k.kod,
         durus: durus.checked, tur: durus.checked && !maddeSec.value ? turSec.value || null : null, kontrol: q.get('kontrol') || null,
+        ...(sorumluSec.value ? { sorumlu: sorumluSec.value } : {}), ...(hedefTarih.value ? { hedefTarih: hedefTarih.value } : {}),
       } });
       if (fotoBlob) {
         try { await api(`/v1/etiket/${t.id}/foto`, { method: 'POST', ham: fotoBlob, tur: 'image/jpeg' }); } catch (err) { bildir(`Etiket açıldı ama fotoğraf yüklenemedi: ${err.message}`, 'uyari'); }
@@ -477,9 +499,9 @@ function etiketAcSayfasi(kod, q) {
   el('div', { class: 'alan' }, el('label', { for: 'madde' }, 'Kontrol maddesi'), maddeSec),
   el('div', { class: 'alan' }, el('label', { for: 'aciklama' }, 'Açıklama'), aciklama),
   el('div', { class: 'alan' }, el('label', { for: 'foto' }, 'Fotoğraf (isteğe bağlı)'), foto, onizleme),
-  durusAlani, turAlani, gonder);
+  durusAlani, turAlani, sorumluAlani, hedefAlani, gonder);
 
-  sayfa(geri(`#/e/${kod}`, e.kod), el('h1', {}, `${e.kod} için etiket`), el('p', { class: 'ipucu' }, 'Beyaz etiketi kendin giderip kapatırsın; kırmızı etiket bakım ekibine iş olarak gider.'), form);
+  sayfa(geri(`#/e/${kod}`, e.kod), el('h1', {}, `${e.kod} için etiket`), el('p', { class: 'ipucu' }, 'Beyaz etiketi kendin giderip kapatırsın; kırmızı etiket bakım ekibinin iş listesine düşer. Her etiketin bir sorumlusu ve hedef tarihi olur.'), form);
   alanlariGuncelle();
 }
 
@@ -502,6 +524,24 @@ async function etiketSayfasi(id) {
   kapatabilir ? [not, el('button', { type: 'submit', class: 'dugme birincil' }, 'Kapat')]
     : el('p', { class: 'soluk' }, t.renk === 'kirmizi' ? 'Kırmızı etiketi teknisyen ya da şef kapatır. Kişi seçimini değiştirerek deneyebilirsin.' : 'Kapatmak için kişi seç.')) : null;
 
+  const atayabilir = t.durum === 'acik' && k && ['teknisyen', 'sef'].includes(k.rol);
+  const ataSorumlu = el('select', { 'aria-label': 'Sorumlu' }, el('option', { value: '' }, 'Atanmadı'),
+    ...sorumlular(t.renk).map((x) => el('option', { value: x.kod, selected: x.kod === t.sorumlu }, `${x.ad} (${ROL[x.rol]})`)));
+  const ataHedef = el('input', { type: 'date', value: t.hedef || '', min: bugunGun(), 'aria-label': 'Hedef tarih' });
+  const ataForm = t.durum === 'acik' ? el('form', { class: 'form ata', onsubmit: async (ev) => {
+    ev.preventDefault();
+    const kk = kisiZorunlu();
+    if (!kk) return;
+    try {
+      await api(`/v1/etiket/${t.id}/ata`, { method: 'POST', govde: { kisi: kk.kod, sorumlu: ataSorumlu.value || null, ...(ataHedef.value && ataHedef.value !== t.hedef ? { hedefTarih: ataHedef.value } : {}) } });
+      bildir('Sorumlu ve hedef kaydedildi.');
+      etiketSayfasi(id);
+    } catch (err) { bildir(err.message, 'hata'); }
+  } },
+  el('h2', {}, 'Sorumlu ve hedef'),
+  atayabilir ? [el('div', { class: 'satir-alanlar' }, ataSorumlu, ataHedef), el('button', { type: 'submit', class: 'dugme' }, 'Kaydet')]
+    : el('p', { class: 'soluk' }, 'Sorumluyu ve hedef tarihi teknisyen ya da şef değiştirir.')) : null;
+
   sayfa(
     geri(`#/e/${t.ekipman}`, t.ekipman),
     el('div', { class: 'kart-baslik' }, el('p', {}, rozet(t.renk, t.renkAd), ' ', t.durum === 'acik' ? rozet('turuncu', 'Açık') : rozet('yesil', 'Kapalı'), t.durus ? [' ', rozet('kirmizi koyu', 'Ekipman çalışamıyor')] : null),
@@ -510,6 +550,8 @@ async function etiketSayfasi(id) {
       el('dt', {}, 'Ekipman'), el('dd', {}, t.ekipmanAd),
       t.maddeMetni ? [el('dt', {}, 'Kontrol maddesi'), el('dd', {}, t.maddeMetni)] : null,
       el('dt', {}, 'Açan'), el('dd', {}, `${t.kisiAd} · ${gunSaat(t.olusturma)}`),
+      el('dt', {}, 'Sorumlu'), el('dd', {}, t.sorumluAd || (t.renk === 'kirmizi' ? 'Atanmadı' : t.kisiAd)),
+      t.hedef ? [el('dt', {}, 'Hedef'), el('dd', {}, hedefGun(t.hedef), ' ', t.gecikti ? rozet('kirmizi koyu', `${t.gecikmeGun} gün gecikti`) : null)] : null,
       t.durum === 'kapali' ? [el('dt', {}, 'Kapatan'), el('dd', {}, `${t.kapatanAd} · ${gunSaat(t.kapanis)}`), el('dt', {}, 'Yapılan'), el('dd', {}, t.kapatmaNotu)] : null),
     t.foto ? el('img', { class: 'foto', src: `/v1/etiket/${t.id}/foto`, alt: 'Etiket fotoğrafı', loading: 'lazy' }) : null,
     t.gonderimler.length ? el('section', { class: 'grup' }, el('h2', {}, 'Bağlı sistemler'),
@@ -518,7 +560,8 @@ async function etiketSayfasi(id) {
         g.sonuc?.id ? el('p', { class: 'soluk' }, `Kayıt: ${g.sonuc.id}`) : null,
         g.sonuc?.not ? el('p', { class: 'soluk' }, g.sonuc.not) : null,
         g.hata ? el('p', { class: 'hata-metin' }, `${g.hata} (deneme ${g.deneme})`) : null,
-        g.durum === 'benzetim' && g.govde?.baslik ? el('details', {}, el('summary', {}, 'Gidecek içerik'), el('pre', {}, `${g.govde.baslik}\n\n${g.govde.aciklama}`)) : null)))) : null,
+        g.durum === 'benzetim' && g.govde?.aciklama ? el('details', {}, el('summary', {}, 'Gidecek içerik'), el('pre', {}, g.govde.aciklama)) : null)))) : null,
+    ataForm,
     kapatForm,
   );
 }
@@ -526,12 +569,22 @@ async function etiketSayfasi(id) {
 async function etiketlerSayfasi(q) {
   const durum = q.get('durum') ?? 'acik';
   const renk = q.get('renk') || '';
-  const v = await api(`/v1/etiket?durum=${encodeURIComponent(durum)}&renk=${encodeURIComponent(renk)}`);
-  const filtre = (ad, deger, metin) => el('a', { class: 'filtre' + (((ad === 'durum' ? durum : renk) === deger) ? ' secili' : ''), href: `#/etiketler?${new URLSearchParams({ durum, renk, [ad]: deger })}` }, metin);
+  const ek = q.get('ek') || ''; // '' | 'geciken' | 'benim'
+  const ben = kisi();
+  const p = new URLSearchParams({ durum, renk });
+  if (ek === 'geciken') p.set('geciken', '1');
+  if (ek === 'benim' && ben) p.set('sorumlu', ben.kod);
+  const sorumluQ = /^K-[A-Z0-9]{2,10}$/.test(q.get('sorumlu') || '') ? q.get('sorumlu') : null; // özetteki "sorumlu başına" bağlantısı
+  if (sorumluQ && ek !== 'benim') p.set('sorumlu', sorumluQ);
+  const v = await api(`/v1/etiket?${p}`);
+  const secim = { durum, renk, ek };
+  const filtre = (ad, deger, metin) => el('a', { class: 'filtre' + (secim[ad] === deger ? ' secili' : ''), href: `#/etiketler?${new URLSearchParams({ ...secim, [ad]: deger, ...(ad === 'ek' && deger === 'geciken' ? { durum: 'acik' } : {}) })}` }, metin);
   sayfa(
     el('h1', {}, 'Etiketler'),
-    el('div', { class: 'filtreler' }, filtre('durum', 'acik', 'Açık'), filtre('durum', 'kapali', 'Kapalı'), el('span', { class: 'ayrac' }), filtre('renk', '', 'Hepsi'), filtre('renk', 'kirmizi', 'Kırmızı'), filtre('renk', 'beyaz', 'Beyaz')),
-    el('p', { class: 'ipucu' }, durum === 'acik' && renk === 'kirmizi' ? 'Bakım ekibinin iş listesi: en eskisi en altta.' : `${v.etiketler.length} etiket`),
+    el('div', { class: 'filtreler' }, filtre('durum', 'acik', 'Açık'), filtre('durum', 'kapali', 'Kapalı'), el('span', { class: 'ayrac' }), filtre('renk', '', 'Hepsi'), filtre('renk', 'kirmizi', 'Kırmızı'), filtre('renk', 'beyaz', 'Beyaz'),
+      el('span', { class: 'ayrac' }), filtre('ek', '', 'Herkes'), filtre('ek', 'geciken', 'Geciken'), ben ? filtre('ek', 'benim', 'Bana atanan') : null),
+    el('p', { class: 'ipucu' }, sorumluQ && ek !== 'benim' ? `Sorumlu: ${S.kisiler.find((x) => x.kod === sorumluQ)?.ad ?? sorumluQ} · ${v.etiketler.length} etiket`
+      : durum === 'acik' && renk === 'kirmizi' ? 'Bakım ekibinin iş listesi: en eskisi en altta.' : `${v.etiketler.length} etiket`),
     v.etiketler.length ? etiketListesi(v.etiketler) : el('p', { class: 'soluk' }, 'Bu filtrede etiket yok.'),
   );
 }
@@ -548,12 +601,20 @@ async function ozetSayfasi(q) {
       kpi(`${o.donemGun} gün uyum`, yuzde(o.uyum.oran), `${o.uyum.yapilan}/${o.uyum.beklenen} kontrol`),
       kpi('Açık kırmızı', String(o.acik.kirmizi), o.acik.durus ? `${o.acik.durus} ekipman duruyor` : 'duran ekipman yok'),
       kpi('Açık beyaz', String(o.acik.beyaz), 'operatörde'),
+      kpi('Geciken', String(o.acik.geciken), 'hedef tarihi geçmiş açık etiket'),
+      kpi('Sorumlusuz kırmızı', String(o.acik.sorumsuzKirmizi), 'atama bekliyor'),
       kpi('Kapanma (kırmızı)', o.ortKapanmaSaat.kirmizi == null ? '–' : `${o.ortKapanmaSaat.kirmizi.toLocaleString('tr-TR')} sa`, 'ortalama'),
       kpi('Kapanma (beyaz)', o.ortKapanmaSaat.beyaz == null ? '–' : `${o.ortKapanmaSaat.beyaz.toLocaleString('tr-TR')} sa`, 'ortalama')),
     el('section', { class: 'grup' }, el('h2', {}, 'Bugün eksik kontroller'),
       o.bugunUyum.eksik.length ? el('ul', { class: 'liste sade' }, ...o.bugunUyum.eksik.map((x) => el('li', {}, el('a', { href: `#/e/${x.kod}` }, x.kod), ` · ${x.vardiyalar.map((v) => `${v}. vardiya`).join(', ')}`))) : el('p', { class: 'soluk' }, 'Eksik kontrol yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'En sık sorunlu maddeler'),
       o.sikMaddeler.length ? el('ul', { class: 'liste sade' }, ...o.sikMaddeler.map((m) => el('li', {}, el('strong', {}, `${m.adet}×`), ` ${m.ekipman} · ${m.metin}`))) : el('p', { class: 'soluk' }, 'Sorunlu madde yok.')),
+    el('section', { class: 'grup' }, el('h2', {}, 'Geciken etiketler'), o.gecikenler.length ? etiketListesi(o.gecikenler) : el('p', { class: 'soluk' }, 'Geciken etiket yok.')),
+    el('section', { class: 'grup' }, el('h2', {}, 'Sorumlu başına açık iş'),
+      o.sorumluYuku.length ? el('div', { class: 'tablo-kap' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Sorumlu'), el('th', { class: 'sag' }, 'Açık'), el('th', { class: 'sag' }, 'Geciken'))),
+        el('tbody', {}, ...o.sorumluYuku.map((x) => el('tr', {}, el('td', {}, el('a', { href: `#/etiketler?durum=acik&ek=&sorumlu=${x.kod}` }, x.ad)), el('td', { class: 'sag' }, String(x.acik)),
+          el('td', { class: 'sag' }, x.geciken ? rozet('kirmizi', String(x.geciken)) : '0'))))))
+        : el('p', { class: 'soluk' }, 'Atanmış açık etiket yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'En eski açık etiketler'), o.enEskiAcik.length ? etiketListesi(o.enEskiAcik) : el('p', { class: 'soluk' }, 'Açık etiket yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'Ekipman başına uyum'),
       el('div', { class: 'tablo-kap' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Ekipman'), el('th', { class: 'sag' }, 'Yapılan'), el('th', { class: 'sag' }, 'Uyum'))),
@@ -574,7 +635,7 @@ function qrSayfasi() {
 
 function girisSayfasi() {
   const sifre = el('input', { type: 'password', id: 'sifre', autocomplete: 'current-password', required: true });
-  sayfa(el('h1', {}, 'Kurum girişi'), el('p', { class: 'ipucu' }, S?.demo ? 'Demo yerine kurumun gerçek alanında çalışmak için. Gönderimler gerçek Pusula ve Arıza Defteri\'ne gider.' : 'Devam etmek için kurum şifresini gir.'),
+  sayfa(el('h1', {}, 'Kurum girişi'), el('p', { class: 'ipucu' }, S?.demo ? 'Demo yerine kurumun gerçek alanında çalışmak için. Duruş ve arıza bildirimleri gerçek Arıza Defteri\'ne gider.' : 'Devam etmek için kurum şifresini gir.'),
     el('form', { class: 'form', onsubmit: async (ev) => {
       ev.preventDefault();
       try {
@@ -622,7 +683,7 @@ async function basla() {
   }
   const serit = $('demo-serit');
   serit.classList.toggle('gizli', !S.demo);
-  if (S.demo) serit.textContent = 'Deneme alanı: kayıtların yalnız sana görünür ve 72 saat sonra silinir. Kırmızı etiket gerçek Pusula\'ya gitmez, gidecek iş gösterilir. Veriler sentetiktir.';
+  if (S.demo) serit.textContent = 'Deneme alanı: kayıtların yalnız sana görünür ve 72 saat sonra silinir. Arıza bildirimleri gerçek Arıza Defteri\'ne gitmez, gidecek kayıt gösterilir. Veriler sentetiktir.';
   $('giris-baglanti').classList.toggle('gizli', !(S.demo && S.girisVar));
   kisiDugmesi();
   if (!kisi()) kisiSec();

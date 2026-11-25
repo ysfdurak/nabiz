@@ -211,3 +211,7 @@ svg.beta .nokta { fill: var(--soluk); }
   .qr-izgara { grid-template-columns: repeat(4, 1fr); }
   .qr { border: 1px dashed #999; }
 }
+
+/* Sorumlu ve hedef: seçim ve tarih yan yana, dar ekranda alt alta */
+.satir-alanlar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.satir-alanlar > * { flex: 1 1 160px; }
