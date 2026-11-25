@@ -11,8 +11,9 @@ import { istanbulGunu } from '../src/cekirdek/zaman.js';
 
 const TURLER = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const GOVDE_SINIRI = 16 * 1024;
+// olcum.ysfdurak.com: ortak ölçüm betiği ve olay gönderimi (betik yalnız resmî adreste yüklenir, web/app.js).
 // blob: yalnız fotoğraf önizlemesi için (telefonda seçilen resim gönderilmeden önce gösterilir).
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
+const CSP = "default-src 'self'; script-src 'self' https://olcum.ysfdurak.com; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://olcum.ysfdurak.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
 const ALAN_CEREZI = 'nabiz_alan';
 const OTURUM_CEREZI = 'nabiz_oturum';
 

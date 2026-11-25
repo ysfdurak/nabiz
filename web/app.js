@@ -1,3 +1,23 @@
+// Anonim kullanım ölçümü ve geri bildirim düğmesi (ortak servis: olcum.ysfdurak.com; kaynak: ysfdurak.com → sunucu/olcum).
+// Yalnız resmî demo adresinde yüklenir: kurum kurulumları dışarıya hiç istek atmaz (çalışan takibi yapılmaz).
+// Gönderilenler: ekran ve işlem adı (ör. "kontrol"), aktif süre, cihaz türü, dil. Ekipman kodu, not, fotoğraf, kişi gönderilmez.
+const OLCUM_ACIK = location.hostname === 'nabiz.ysfdurak.com';
+if (OLCUM_ACIK) {
+  const s = document.createElement('script');
+  s.src = 'https://olcum.ysfdurak.com/olcum.js';
+  s.defer = true;
+  s.dataset.proje = 'nabiz';
+  s.dataset.renk = '#1f3a5f';
+  document.head.appendChild(s);
+}
+function olc(tur, ad) {
+  if (!OLCUM_ACIK) return;
+  if (window.olcum && window.olcum[tur]) window.olcum[tur](ad);
+  else (window.olcumKuyruk ||= []).push([tur, ad]);
+}
+// İşlem adı yalnız sabit yol parçalarından: /v1/etiket/12/kapat → "islem:etiket_kapat" (kimlikler atılır).
+const islemAdi = (yol) => 'islem:' + yol.split('?')[0].split('/').filter((p) => /^[a-z-]+$/.test(p) && p !== 'v1').join('_');
+
 // Nabız telefon arayüzü. Adres çubuğundaki #/... yolu sayfayı seçer; QR kodu #/e/<kod> açar.
 // Güvenlik: sayfaya giden her metin textContent ile yazılır (el yardımcısı); innerHTML kullanılmaz.
 'use strict';
@@ -74,6 +94,7 @@ async function api(yol, { method = 'GET', govde, ham, tur } = {}) {
   const v = await y.json().catch(() => ({}));
   if (y.status === 401 && v.kod === 'alan_yok') { location.reload(); throw new Error(v.hata); }
   if (!y.ok) { const h = new Error(v.hata || 'İstek başarısız.'); h.kod = v.kod; h.durum = y.status; throw h; }
+  if (method === 'POST' && yol !== '/v1/giris') olc('olay', islemAdi(yol));
   return v;
 }
 
@@ -654,6 +675,7 @@ async function yonlendir() {
   const [yol, sorgu = ''] = location.hash.replace(/^#/, '').split('?');
   const q = new URLSearchParams(sorgu);
   const p = (yol || '/').split('/').filter(Boolean);
+  olc('ekran', p[0] || 'ekipman');
   const sekme = p[0] === 'etiketler' || p[0] === 'etiket' ? 'etiketler' : p[0] === 'ozet' || p[0] === 'qr' ? 'ozet' : p[0] === 'kayip' || p[0] === 'a3' ? 'kayip' : p[0] === 'analiz' ? 'analiz' : 'ekipman';
   document.querySelectorAll('.sekmeler a').forEach((a) => a.toggleAttribute('aria-current', a.dataset.sekme === sekme));
   if (p[0] === 'giris') return girisSayfasi();
