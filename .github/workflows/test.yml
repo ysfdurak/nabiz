@@ -35,7 +35,7 @@ jobs:
         run: |
           python -m venv ../analiz-venv
           ../analiz-venv/bin/pip install --require-hashes -r ../nabiz-analiz/requirements.txt
-          pip install playwright==1.*
+          pip install playwright==1.* pillow  # Pillow: 1600 px test fotoğrafı (küçültme denenir)
       - name: Tarayıcı duman testi (Chrome, üç servis birlikte)
         run: |
           (cd ../ariza-defteri && npm ci --omit=dev && DATA_DIR=./tmp/data PORT=8091 DAKIKALIK_ISTEK=1000 npm start > ../ariza.log 2>&1 &)
