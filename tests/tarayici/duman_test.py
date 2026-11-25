@@ -16,7 +16,9 @@ try:
     from PIL import Image, ImageDraw
     im = Image.new("RGB", (1600, 1200), (200, 190, 170)); d = ImageDraw.Draw(im); d.ellipse((600, 700, 900, 850), fill=(60, 45, 20))
     im.save(foto, "JPEG", quality=85)
+    beklenen_genislik = 1280  # 1600 piksel 1280'e küçültülmeli
 except ImportError:
+    beklenen_genislik = 1  # 1×1 JPEG küçültülmez
     foto.write_bytes(bytes.fromhex("ffd8ffe000104a46494600010100000100010000ffdb004300080606070605080707070909080a0c140d0c0b0b0c1912130f141d1a1f1e1d1a1c1c20242e2720222c231c1c2837292c30313434341f27393d38323c2e333432ffc0000b080001000101011100ffc4001f0000010501010101010100000000000000000102030405060708090a0bffda0008010100003f00d2cf20ffd9"))
 
 hatalar = []
@@ -58,7 +60,14 @@ with sync_playwright() as p:
         s.wait_for_selector("img.foto")
         assert s.locator("text=Benzetim").count() == 2, "iki gönderim benzetim olmalı"
         s.screenshot(path=str(cikti / "etiket.png"), full_page=True)
-        assert s.evaluate("document.querySelector('img.foto').naturalWidth") == 1280, "fotoğraf 1280 piksele küçültülmeli"
+        # Görsel yavaş makinede (CI) geç yüklenir; yüklenene kadar bekle (wait_for_function CSP'ye takılır)
+        genislik = 0
+        for _ in range(50):
+            genislik = s.evaluate("(() => { const i = document.querySelector('img.foto'); return i && i.complete ? i.naturalWidth : 0 })()")
+            if genislik:
+                break
+            s.wait_for_timeout(100)
+        assert genislik == beklenen_genislik, f"fotoğraf genişliği {beklenen_genislik} olmalı, gelen: {genislik}"
         # Operatör kırmızıyı kapatamaz; teknisyene geç ve kapat
         assert s.locator("text=Kırmızı etiketi teknisyen ya da şef kapatır").count() == 1
         s.click("#kisi-dugme"); s.get_by_role("button", name="Serkan Aydın").click()
