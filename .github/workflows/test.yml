@@ -23,13 +23,28 @@ jobs:
         run: npm ci
       - name: Testler (kurallar, giden kutusu, Pusula istemcisi, API, MCP)
         run: npm test
+      # V2 ekranları (Kayıp, Analiz, A3) gerçek Arıza Defteri ve Nabız Analiz ister: ikisi de açık depo, burada ayağa kalkar.
+      - name: Arıza Defteri ve Nabız Analiz depolarını al
+        run: |
+          git clone --depth 1 https://github.com/ysfdurak/ariza-defteri ../ariza-defteri
+          git clone --depth 1 https://github.com/ysfdurak/nabiz-analiz ../nabiz-analiz
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
-      - name: Playwright kur
-        run: pip install playwright==1.*
-      - name: Tarayıcı duman testi (Chrome)
+          python-version: '3.13'
+      - name: Python bağımlılıkları (analiz özetle sabit, Playwright)
         run: |
-          npm run start:dev > sunucu.log 2>&1 &
+          python -m venv ../analiz-venv
+          ../analiz-venv/bin/pip install --require-hashes -r ../nabiz-analiz/requirements.txt
+          pip install playwright==1.*
+      - name: Tarayıcı duman testi (Chrome, üç servis birlikte)
+        run: |
+          (cd ../ariza-defteri && npm ci --omit=dev && DATA_DIR=./tmp/data PORT=8091 DAKIKALIK_ISTEK=1000 npm start > ../ariza.log 2>&1 &)
+          for i in $(seq 1 120); do curl -fs http://localhost:8091/healthz && break; sleep 1; done
+          (cd ../nabiz-analiz && ARIZA_DEFTERI_URL=http://localhost:8091 PORT=8093 DAKIKALIK_ISTEK=1000 ../analiz-venv/bin/python -m analiz > ../analiz.log 2>&1 &)
+          for i in $(seq 1 60); do curl -fs http://localhost:8093/healthz && break; sleep 1; done
+          ARIZA_DEFTERI_URL=http://localhost:8091 ANALIZ_URL=http://localhost:8093 npm run start:dev > sunucu.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://localhost:8081/healthz && break; sleep 1; done
           python3 tests/tarayici/duman_test.py "$(which google-chrome)" http://localhost:8081/
+      - name: Hata olursa servis kayıtları
+        if: failure()
+        run: tail -n 40 sunucu.log ../ariza.log ../analiz.log || true

@@ -58,7 +58,14 @@ with sync_playwright() as p:
         s.wait_for_selector("img.foto")
         assert s.locator("text=Benzetim").count() == 2, "iki gönderim benzetim olmalı"
         s.screenshot(path=str(cikti / "etiket.png"), full_page=True)
-        assert s.evaluate("document.querySelector('img.foto').naturalWidth") == 1280, "fotoğraf 1280 piksele küçültülmeli"
+        # Görsel yavaş makinede (CI) geç yüklenir; yüklenene kadar bekle (wait_for_function CSP'ye takılır)
+        genislik = 0
+        for _ in range(50):
+            genislik = s.evaluate("(() => { const i = document.querySelector('img.foto'); return i && i.complete ? i.naturalWidth : 0 })()")
+            if genislik:
+                break
+            s.wait_for_timeout(100)
+        assert genislik == 1280, f"fotoğraf 1280 piksele küçültülmeli, gelen: {genislik}"
         # Operatör kırmızıyı kapatamaz; teknisyene geç ve kapat
         assert s.locator("text=Kırmızı etiketi teknisyen ya da şef kapatır").count() == 1
         s.click("#kisi-dugme"); s.get_by_role("button", name="Serkan Aydın").click()
