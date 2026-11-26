@@ -64,3 +64,15 @@ test('takip kuralları: varsayılan hedef, gecikme, kim sorumlu olabilir', async
   assert.deepEqual([sorumluOlabilirMi(tek, 'kirmizi'), sorumluOlabilirMi(op, 'kirmizi'), sorumluOlabilirMi(sef, 'kirmizi')], [true, false, false]);
   assert.deepEqual([sorumluOlabilirMi(tek, 'beyaz'), sorumluOlabilirMi(op, 'beyaz'), sorumluOlabilirMi(sef, 'beyaz')], [true, true, false]);
 });
+
+test('emniyet ve hızlı kontrol kuralları', async () => {
+  const { varsayilanHedef, hizliKontrolMu } = await import('../src/cekirdek/kurallar.js');
+  const { KONTROL_LISTELERI } = await import('../src/cekirdek/kontrol-listeleri.js');
+  assert.equal(varsayilanHedef('kirmizi', true, '2026-11-24', true), '2026-11-24', 'emniyet: aynı gün');
+  for (const [tip, l] of Object.entries(KONTROL_LISTELERI)) {
+    assert.ok(l.some((m) => m.emniyet), `${tip}: en az bir emniyet maddesi`);
+    assert.ok(l.filter((m) => m.emniyet).every((m) => m.renk === 'kirmizi'), `${tip}: emniyet maddesi kırmızı`);
+  }
+  assert.equal(hizliKontrolMu({ baslangic: 0, bitis: 29_000 }, 5), true, '5 madde 29 sn');
+  assert.equal(hizliKontrolMu({ baslangic: 0, bitis: 30_000 }, 5), false);
+});

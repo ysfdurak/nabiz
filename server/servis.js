@@ -1,7 +1,7 @@
 // Servis katmanı: web kapısı (/v1) ve MCP kapısı (/mcp) aynı fonksiyonları çağırır. Kurallar burada.
 // Her işlem bir "kum" (alan) içinde çalışır: 'ana' ya da ziyaretçinin kendi alanı (store.js).
 import { KONTROL_LISTELERI, listeBul } from '../src/cekirdek/kontrol-listeleri.js';
-import { RENKLER, buVardiyaKontrolu, geciktiMi, kontrolUyumu, sorumluOlabilirMi, varsayilanHedef, vardiyaBul, yetkiliMi } from '../src/cekirdek/kurallar.js';
+import { RENKLER, buVardiyaKontrolu, geciktiMi, hizliKontrolMu, kontrolUyumu, sorumluOlabilirMi, varsayilanHedef, vardiyaBul, yetkiliMi } from '../src/cekirdek/kurallar.js';
 import { anMs, gecerliGun, gunEkle, gunFarki, isoTr, istanbulGunu } from '../src/cekirdek/zaman.js';
 import { DUNYA_SINIFI, oeeRaporu } from '../src/cekirdek/oee.js';
 import { a3Taslagi } from '../src/cekirdek/a3.js';
@@ -121,6 +121,7 @@ export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, app
     kisiAd: kisiBul(e.kisi)?.ad ?? e.kisi,
     kapatanAd: e.kapatan ? kisiBul(e.kapatan)?.ad ?? e.kapatan : null,
     sorumluAd: e.sorumlu ? kisiBul(e.sorumlu)?.ad ?? e.sorumlu : null,
+    emniyet: !!e.madde && listeBul(ekipmanBul(e.ekipman)?.tip).find((m) => m.kod === e.madde)?.emniyet === true,
     gecikti: geciktiMi(e, istanbulGunu(simdi())),
     gecikmeGun: geciktiMi(e, istanbulGunu(simdi())) ? gunFarki(e.hedef, istanbulGunu(simdi())) : 0,
     maddeMetni: e.madde ? listeBul(ekipmanBul(e.ekipman)?.tip).find((m) => m.kod === e.madde)?.metin ?? null : null,
@@ -231,7 +232,10 @@ export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, app
         madde = listeBul(e.tip).find((m) => m.kod === g.madde);
         if (!madde) throw new KuralHatasi('Kontrol maddesi bu ekipmana ait değil.');
       }
-      const durus = g.durus === true;
+      // Emniyet maddesi: ekipman kilitlenir (kullanılmaz) ve etiket kırmızıdır; işaretlemeyi operatöre bırakmayız.
+      const emniyet = madde?.emniyet === true;
+      if (emniyet && g.renk !== 'kirmizi') throw new KuralHatasi('Emniyet maddesi kırmızı etiketle bildirilir: ekipman kullanılmaz.');
+      const durus = g.durus === true || emniyet;
       let tur = madde?.tur ?? null;
       if (g.tur != null) {
         const t = ana().arizaTurleri.find((x) => x.kod === g.tur && x.tip === e.tip);
@@ -247,7 +251,7 @@ export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, app
       }
       const bugun = istanbulGunu(simdi());
       const sorumlu = g.sorumlu != null ? sorumluDogrula(g.sorumlu, g.renk).kod : g.renk === 'beyaz' && sorumluOlabilirMi(kisi, 'beyaz') ? kisi.kod : null;
-      const hedef = g.hedefTarih != null ? hedefDogrula(g.hedefTarih, bugun) : varsayilanHedef(g.renk, durus, bugun);
+      const hedef = g.hedefTarih != null ? hedefDogrula(g.hedefTarih, bugun) : varsayilanHedef(g.renk, durus, bugun, emniyet);
       hak(kum, 'etiket');
       const an = simdi();
       const id = store.etiketEkle(kum, { ekipman: e.kod, renk: g.renk, madde: madde?.kod, tur, aciklama, kisi: kisi.kod, olusturma: an, durus, kontrol, sorumlu, hedef });
@@ -455,6 +459,12 @@ export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, app
       return {
         donemGun: gunSayisi,
         uyum: { oran: uyum.oran, beklenen: uyum.beklenen, yapilan: uyum.yapilan },
+        /** Madde başına 6 sn'den kısa süren kontroller: bakılmadan işaretlenmiş olabilir. */
+        hizliKontrol: (() => {
+          const l = kontroller.filter((k) => hizliKontrolMu(k, listeBul(ekipmanBul(k.ekipman)?.tip).length || 5));
+          return { adet: l.length, oran: kontroller.length ? Math.round((l.length / kontroller.length) * 1000) / 1000 : null,
+            kisiler: [...Map.groupBy(l, (k) => k.kisi)].map(([kod, x]) => ({ kod, ad: kisiBul(kod)?.ad ?? kod, adet: x.length })).sort((a2, b2) => b2.adet - a2.adet).slice(0, 3) };
+        })(),
         bugunUyum: { oran: bugunUyum.oran, eksik: bugunUyum.ekipmanlar.filter((x) => x.eksik.length).map((x) => ({ kod: x.kod, vardiyalar: x.eksik })) },
         ekipmanUyum: uyum.ekipmanlar.map(({ kod, beklenen, yapilan }) => ({ kod, ad: ekipmanBul(kod)?.ad, beklenen, yapilan, oran: beklenen ? Math.round((yapilan / beklenen) * 1000) / 1000 : null })),
         acik: {

@@ -122,6 +122,12 @@ test('sorumlu ve hedef tarih: kurallar, atama yetkisi, gecikme, filtreler ve öz
     assert.equal((await ac({ hedefTarih: '2026-11-23' })).durum, 400, 'geçmiş tarih olmaz');
     assert.equal((await ac({ hedefTarih: '2027-11-24' })).durum, 400, 'yanlış yıl yakalanır (en çok 90 gün)');
     assert.equal((await ac({ hedefTarih: '24.11.2026' })).durum, 400);
+    // Emniyet maddesi (acil stop): beyaz olmaz; kırmızı açılınca ekipman duruyor sayılır, hedef aynı gün
+    assert.equal((await ac({ renk: 'beyaz', madde: 'acil' })).durum, 400);
+    const em = await ac({ madde: 'acil', tur: null });
+    assert.equal(em.durum, 201);
+    assert.deepEqual([em.govde.emniyet, em.govde.durus, em.govde.hedef], [true, true, '2026-11-24']);
+    assert.equal(em.govde.gonderimler[0]?.hedef, 'ariza_bildir', 'emniyet arızası Arıza Defteri\'ne de düşer');
     const e = await ac({ sorumlu: 'K-MKAYA', hedefTarih: '2026-11-24' });
     assert.equal(e.durum, 201);
     assert.equal(e.govde.sorumluAd, 'Murat Kaya');
@@ -149,6 +155,7 @@ test('sorumlu ve hedef tarih: kurallar, atama yetkisi, gecikme, filtreler ve öz
     assert.equal((await a('/v1/etiket?sorumlu=K-YOK')).durum, 400);
     const o = await a('/v1/ozet');
     assert.equal(o.govde.acik.geciken, geciken.govde.etiketler.length);
+    assert.ok(o.govde.hizliKontrol.adet >= 0 && 'kisiler' in o.govde.hizliKontrol, 'hızlı kontrol göstergesi');
     assert.equal(o.govde.acik.sorumsuzKirmizi, tum.govde.etiketler.filter((x) => x.renk === 'kirmizi' && !x.sorumlu).length);
     assert.ok(o.govde.sorumluYuku.find((x) => x.kod === 'K-MKAYA').acik >= 1);
     const so = await a('/v1/sabah-ozeti');
