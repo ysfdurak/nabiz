@@ -45,7 +45,7 @@ export function a3Taslagi(g) {
     onlemler.push('Güvenilirlik analizi yok ya da veri yetersiz: önce kayıt disiplini (her duruşun kaydı) sağlanmalı.');
   }
   for (const b of ilgiliBulgular) {
-    if (b.tur === 'tekrarlayan_gun') onlemler.push(`Tekrarlayan gün: ${b.metin} O günün öncesindeki iş, şarj ve vardiya düzeni incelenmeli.`);
+    if (b.tur === 'tekrarlayan_gun') onlemler.push(`Tekrarlayan gün: ${b.metin} O günün öncesindeki iş, vardiya ve bakım düzeni incelenmeli.`);
     if (b.tur === 'tek_kisi') onlemler.push(`Tek kişiye bağımlılık: ${b.metin} Emanet'te çapraz eğitim planı açılmalı.`);
   }
   if (ekipman[0] && g.kayitlar.length >= 5 && ekipman[0][1] / g.kayitlar.length >= 0.5) {

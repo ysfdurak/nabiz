@@ -8,7 +8,7 @@ import { vardiyaBasi, varsayilanHedef } from './kurallar.js';
 
 const ACIKLAMALAR = {
   hidrolik: ['Sol silindirin altında yağ damlası var', 'Zeminde avuç kadar yağ lekesi', 'Kaldırırken hortumdan sızıntı'],
-  aku: ['Şarj %20, soket gevşek', 'Akü kablosu ezilmiş görünüyor'],
+  aku: ['Soket gevşek, ısınma izi var', 'Akü kablosu ezilmiş görünüyor'],
   lastik: ['Ön sağ lastikte kesik var'],
   fren: ['Park freni rampada tutmuyor'],
   ikaz: ['Ekranda E-14 hata kodu', 'Sağ far yanmıyor'],
