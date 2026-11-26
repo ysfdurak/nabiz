@@ -189,7 +189,10 @@ V2 ve V2.1'de 6 ekran eklendi (Kayıp, Analiz, A3, sorumlu atama, Geciken, sabah
 
 **Karar (gerçekçilik, 26.11.2026):** Sentetik veride forklift başına yılda ~230 kayıt vardı; 96'sı "akü şarjı bitti" idi. Akü şarjının bitmesi arıza değildir: şarj planının işidir, arıza kaydına girmez. Bu yüzden Arıza Defteri surum 5'te çıkarıldı. Aynı türde yalnız gerçek arıza kaldı: **akü soketi ya da kablosu hasarlı** (seyrek, forklift başına yılda ~4, teknisyen gerekir). Nabız'daki kontrol maddesi de değişti: "Akü şarjı %30 üstünde" yerine "Akü soketi, kablosu ve pabuçları sağlam"; renk beyazdan kırmızıya (operatör gideremez).
   - **Bu yapı uygun değil, şöyle uygulanır:** Bir olay "durdu" diye arıza sayılmaz. Arıza ekipmanın bozulmasıdır; şarjın bitmesi, malzeme beklemek, operatörün molası planlama ve operasyon konusudur. Bunlar arıza kaydına girerse Pareto'nun tepesine yerleşir ve asıl bozulmaları gizler.
-  - **Hâlâ yüksek:** forklift başına yılda ~163 kayıt kaldı (63'ü arıza; hidrolik kaçak tek başına 32). Sahada bakım ekibi gerektiren arıza ayda birkaç tanedir. Yoğunluğun düşürülmesi ayrı bir karar: analiz için veri azalır, kör deneme yeniden yapılır.
+  - **Sonra bütün veri gerçek sıklığa çekildi (surum 6):** sentetik veri sahadakinin 10-20 katıydı; forklift başına yılda ~160 kayıt yerine artık ~9 (~4'ü teknisyen arızası). Sonuçları:
+    - Nabız Analiz 3 yıllık veriyle çalışıyor, bulgular 180 günle. A3 varsayılan dönemi de 180 gün (gerçek sıklıkta bir tür 90 günde birkaç kez görülür).
+    - **Bakım önerisi yön değiştirdi:** şişirilmiş veride "forklift 30 → 13 gün" çıkıyordu; gerçek sıklıkta "30 gün yeterli, uzatılabilir". Yalnız sorterde (tray aşınması) kısaltma çıkıyor. Ekran uzatma önerisinin yanına "bu yalnız arıza duruşu hesabıdır, emniyet muayenesi ve üretici talimatı ayrıca bakılmalı" yazıyor; A3 de öneri yönüne göre cümle kuruyor (`aralikCumlesi`).
+    - **Bu yapı uygun değil, şöyle uygulanır:** Bir ekranın söylediği sonucu, ancak arkasındaki veri sahaya benziyorsa savun. Şişirilmiş veride "bakımı sıklaştır" demek, gerçek depoda gereksiz bakım ve duruş demekti.
 
 ## 7c. V3: planlı bakım, sayaç ve 7 adım (26.11.2026)
 
@@ -290,6 +293,7 @@ Cevaplar (önce kendin dene): Hayır, benzetim olarak saklanır · Hayır, 403; 
 | Tarih | Değişiklik |
 | --- | --- |
 | 25.11.2026 | Ortak ölçüm ve geri bildirim (olcum.ysfdurak.com), yalnız nabiz.ysfdurak.com'da. Ekran = adresin ilk parçası (`#/e/F-03` → `e`), işlem = POST yolunun sabit parçaları (`/v1/etiket/12/kapat` → `islem:etiket_kapat`); kimlik, ekipman kodu, not ve fotoğraf gitmez. Kurum kurulumunda betik yüklenmez. Ders: ölçüme ham adres verilseydi her ekipman ayrı bir "ekran" sayılırdı; yönetim sayfası okunmaz hâle gelirdi. |
+| 26.11.2026 | Gerçek sıklık (Arıza Defteri surum 6): test verisi yenilendi (bulgular ve RT-HID kayıtları 180 gün). A3 varsayılan dönemi 180 gün; A3 ve Bakım ekranı öneri yönüne göre cümle kuruyor (kısalt / uygun / uzatılabilir + emniyet notu). 30 test. |
 | 26.11.2026 | Akü şarjının bitmesi arıza sayılmıyor (Arıza Defteri surum 5): kontrol maddesi "akü soketi, kablosu ve pabuçları sağlam", renk kırmızı; örnek etiket ve A3 metninden "şarj" kaldırıldı; test verisi yenilendi. 30 test. |
 | 26.11.2026 | V3 (bölüm 7c): Bakım sekmesi (eski Analiz; `#/analiz` adresi korunur): takvim, sayaç, gecikti / önerilen aralığı aştı / yaklaşıyor; ekipman listesi ve kartta bakım rozeti; sabah özetinde geciken bakım; MCP `bakim_durumu` ve `otonom_bakim_olgunlugu`; 7 adım sayfası (`#/olgunluk`). Örnek etiketler kontrole bağlı, kontrol dışı kırmızılar eklendi. Yüzde arkasındaki Türkçe ekler kaldırıldı. 30 test. |
 | 26.11.2026 | Kullanıcı gözüyle inceleme (bölüm 7b): "Hepsini tamam" kaldırıldı, hızlı kontrol göstergesi; emniyet maddeleri (kırmızı, ekipman duruyor, hedef aynı gün); Etiket filtreleri iki adlı satır; Analiz ve Kayıp tek cümlelik sonuçla açılıyor, Analiz %42 kısaldı; sabah özeti önizlemesi açılır bölümde; demoda "5 dakikada dene". 27 test. |

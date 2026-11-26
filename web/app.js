@@ -376,7 +376,7 @@ async function analizSayfasi() {
   const liste = (l) => l.map((t) => t.ad.toLocaleLowerCase('tr-TR')).join(', ').replace(/, ([^,]*)$/, ' ve $1');
   const sonuc = [
     kisalt.length ? `${liste(kisalt)} için bakım sıklaştırılmalı (${kisalt.map((t) => `${sayi(t.mevcut_gun)} → ${Math.round(t.onerilen_gun)}`).join(', ')} gün).` : 'Hiçbir tipte bakımı sıklaştırmak gerekmiyor.',
-    uzat.length ? `${liste(uzat)} için aralık uzatılabilir.`.replace(/^./, (h) => h.toLocaleUpperCase('tr-TR')) : '',
+    uzat.length ? `${liste(uzat)} için aralık uzatılabilir; bu yalnız arıza duruşu hesabıdır, emniyet muayenesi ve üretici talimatı ayrıca bakılmalı.`.replace(/^./, (h) => h.toLocaleUpperCase('tr-TR')) : '',
     `${say('asinma')} arıza türü aşınıyor (planlı bakımla önlenir), ${say('rastgele')} tür rastgele (bakım sıklığı etkilemez; kontrol listesi ve kök neden analizi azaltır)${say('erken') ? `, ${say('erken')} türde bakımdan hemen sonra arıza artıyor (bakım işinin kalitesine bakılmalı)` : ''}.`,
   ].filter(Boolean).join(' ').replace(/^./, (h) => h.toLocaleUpperCase('tr-TR'));
   const turKarti = (t) => el('li', { class: 'tur-satir' },

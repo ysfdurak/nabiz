@@ -410,7 +410,7 @@ export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, app
       disZorunlu(ariza, 'Arıza Defteri');
       const t = ana().arizaTurleri.find((x) => x.kod === tur);
       if (!t) throw new KuralHatasi('Arıza türü bulunamadı.', { durum: 404, kod: 'yok' });
-      const gun = [30, 90].includes(Number(q.gun)) ? Number(q.gun) : 90;
+      const gun = [30, 90, 180].includes(Number(q.gun)) ? Number(q.gun) : 180; // gerçek sıklıkta bir tür 90 günde birkaç kez görülür
       const [kayitlar, o, b] = await dis(() => Promise.all([ariza.turKayitlari(tur, gun), ariza.ozet(gun), ariza.bulgular(gun)]));
       let gv = null, aralik = null;
       if (analiz.acik) {

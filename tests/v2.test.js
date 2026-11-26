@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { oeeTopla, oeeRaporu } from '../src/cekirdek/oee.js';
-import { a3Taslagi } from '../src/cekirdek/a3.js';
+import { a3Taslagi, aralikCumlesi } from '../src/cekirdek/a3.js';
 import { loadConfig, kok } from '../server/config.js';
 import { openStore } from '../server/store.js';
 import { createApp } from '../server/app.js';
@@ -15,7 +15,7 @@ import { DisServisHatasi, gidenIsleyici } from '../server/entegrasyon.js';
 import ana from '../veri/ana-veriler.json' with { type: 'json' };
 
 const oku = (ad) => JSON.parse(readFileSync(new URL(`./veri/${ad}`, import.meta.url)));
-const URETIM = oku('uretim-14.json'), OZET = oku('ozet-30.json'), RTHID = oku('arizalar-RT-HID-90.json'), BULGU = oku('bulgular-90.json'), GUV = oku('guvenilirlik.json');
+const URETIM = oku('uretim-14.json'), OZET = oku('ozet-30.json'), RTHID = oku('arizalar-RT-HID-180.json'), BULGU = oku('bulgular-180.json'), GUV = oku('guvenilirlik.json');
 const SIMDI = Date.parse(readFileSync(new URL('./veri/zaman.txt', import.meta.url), 'utf8').trim());
 
 test('OEE: elle hesaplananla aynı; toplarken oranların ortalaması değil, süre ve adet toplamı', () => {
@@ -52,10 +52,18 @@ test('A3 taslağı: 7 bölüm; aşınma ve tekrarlayan gün karşı önlem olara
   });
   assert.deepEqual(a.bolumler.map((b) => b.ad), ['Konu', 'Arka plan', 'Mevcut durum', 'Analiz', 'Hedef', 'Karşı önlemler', 'Takip']);
   const onlem = a.bolumler[5].metin.join(' ');
-  assert.match(onlem, /Aşınma/);
-  assert.match(onlem, /bakım aralığı 30 → \d+ gün/);
+  // RT-HID'nin çoğu RT-03'ün cuma arızası: zamandan bağımsız, analiz "rastgele" der. Önlem bakım aralığı değil, kök neden.
+  assert.match(onlem, /Rastgele/);
   assert.match(onlem, /Tekrarlayan gün/);
   assert.match(a.bolumler[2].metin.join(' '), /Gün: Cuma/);
+  // Aşınan tür (SR-TRY): öneri yönüne göre cümle
+  const sr = ana.arizaTurleri.find((t) => t.kod === 'SR-TRY');
+  const b = a3Taslagi({ tur: 'SR-TRY', turBilgi: { ...sr, tipAd: 'Sorter' }, kayitlar: [], pareto: [], guvenilirlik: GUV.turler.find((t) => t.tur === 'SR-TRY'),
+    aralik: GUV.tipler.find((t) => t.tip === 'sorter'), bulgular: [], donemGun: 180 });
+  assert.match(b.bolumler[5].metin.join(' '), /Aşınma.*kısaltılması değerlendirilmeli \(30 → \d+ gün\)/);
+  const uzun = aralikCumlesi('Forklift', { mevcut_gun: 30, onerilen_gun: 75, sinirda: false });
+  assert.match(uzun, /yeterli.*75 güne uzatmayı.*emniyet muayenesi/);
+  assert.match(aralikCumlesi('Forklift', { mevcut_gun: 30, onerilen_gun: 31 }), /uygun/);
   const bos = a3Taslagi({ tur: 'RT-HID', turBilgi: tur, kayitlar: [], pareto: [], guvenilirlik: null, aralik: null, bulgular: [], donemGun: 90 });
   assert.match(bos.bolumler[5].metin[0], /Güvenilirlik analizi yok/);
 });
@@ -159,7 +167,9 @@ test('V3 bakım ucu: takvim + sayaç + öneri; analiz yoksa yalnız takvim; Arı
     for (let i = 1; i < b.govde.satirlar.length; i++) assert.ok(sira[b.govde.satirlar[i - 1].durum] <= sira[b.govde.satirlar[i].durum], 'durum sırası');
     const fl = b.govde.satirlar.find((x) => x.tip === 'forklift');
     assert.ok(fl.bakimdanBeriSaat != null && fl.periyotSaat > 300, 'sayaç Arıza Defteri\'nden (surum 4)');
-    assert.ok(fl.onerilenGun > 0 && fl.onerilenGun < 30, 'forklift için kısalt önerisi');
+    assert.equal(fl.onerilenGun, null, 'gerçek sıklıkta (surum 6) forklift önerisi uzatma yönünde: uyarı değil');
+    const sr = b.govde.satirlar.find((x) => x.tip === 'sorter');
+    assert.ok(sr.onerilenGun > 0 && sr.onerilenGun < 30, 'sorter için kısalt önerisi (SR-TRY aşınıyor)');
     const so = await iste('/v1/sabah-ozeti');
     const gec = b.govde.satirlar.filter((x) => x.durum === 'gecikti');
     if (gec.length) assert.ok(so.govde.metin.includes(`${gec.length} planlı bakım gecikti`));
