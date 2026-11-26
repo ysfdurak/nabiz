@@ -219,3 +219,14 @@ svg.beta .nokta { fill: var(--soluk); }
 /* Sabah özeti önizlemesi: telefondaki bildirim gibi */
 .bildirim-onizleme { background: var(--kart); border: 1px solid var(--cizgi); border-left: 4px solid var(--turuncu); border-radius: 10px; padding: 10px 14px; }
 .bildirim-onizleme pre { white-space: pre-wrap; font-family: inherit; font-size: 0.9rem; margin: 6px 0 0; }
+
+/* Kullanıcı gözüyle inceleme (26.11.2026) */
+.durum.kirmizi { background: var(--kirmizi-acik); color: var(--kirmizi); font-weight: 600; }
+.filtre-satir { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+.filtre-ad { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--soluk); min-width: 52px; }
+details.grup > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+.sonuc { font-size: 1.02rem; line-height: 1.45; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 10px 14px; margin: 8px 0 12px; }
+.tur-kisa { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.tur-kisa li { font-size: 0.85rem; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 999px; padding: 2px 10px; }
+.dene { margin: 8px 0 12px; padding: 10px 14px; border: 1px dashed var(--cizgi); border-radius: 10px; }
+.dene ol { margin: 4px 0 0 18px; padding: 0; }

@@ -37,9 +37,21 @@ export function yetkiliMi(kisi, eylem, etiket = null) {
  */
 export const sorumluOlabilirMi = (kisi, renk) => !!kisi && (renk === 'kirmizi' ? kisi.rol === 'teknisyen' : ['operator', 'teknisyen'].includes(kisi.rol));
 
-/** Hedef tarih verilmezse: ekipmanı durduran kırmızı ertesi gün, diğer kırmızı 3 gün, beyaz 7 gün içinde kapanmalı. */
-export const HEDEF_GUN = { durus: 1, kirmizi: 3, beyaz: 7 };
-export const varsayilanHedef = (renk, durus, acilisGunu) => gunEkle(acilisGunu, durus ? HEDEF_GUN.durus : HEDEF_GUN[renk]);
+/**
+ * Hedef tarih verilmezse: emniyet maddesi aynı gün, ekipmanı durduran kırmızı ertesi gün, diğer kırmızı 3 gün,
+ * beyaz 7 gün içinde kapanmalı.
+ */
+export const HEDEF_GUN = { emniyet: 0, durus: 1, kirmizi: 3, beyaz: 7 };
+export const varsayilanHedef = (renk, durus, acilisGunu, emniyet = false) =>
+  gunEkle(acilisGunu, emniyet ? HEDEF_GUN.emniyet : durus ? HEDEF_GUN.durus : HEDEF_GUN[renk]);
+
+/**
+ * Hızlı kontrol: madde başına 6 saniyenin altında bitmiş kontrol (5 maddelik liste 30 sn). Freni denemek, ekipmanın
+ * etrafında dönmek bundan uzun sürer; bu kadar hızlı biten kontrol büyük olasılıkla bakılmadan işaretlenmiştir
+ * ("kâğıt doldurma"). Ceza değil, şefin konuşma konusu.
+ */
+export const HIZLI_SN_MADDE = 6;
+export const hizliKontrolMu = (k, maddeSayisi) => (k.bitis - k.baslangic) / 1000 < maddeSayisi * HIZLI_SN_MADDE;
 
 /** Açık etiketin hedef günü geçtiyse gecikmiştir (hedef günü içinde kapanan gecikmiş sayılmaz). */
 export const geciktiMi = (etiket, bugun) => etiket.durum === 'acik' && !!etiket.hedef && etiket.hedef < bugun;

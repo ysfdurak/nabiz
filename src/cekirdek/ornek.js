@@ -59,7 +59,9 @@ export function ornekGecmis(ana, simdi, gunSayisi = 7) {
           if (e.kod === 'RT-03' && m.kod === 'hidrolik' && haftaGunu(gun) === 5) nok = r.sayi() < 0.7;
           return { madde: m.kod, durum: nok ? 'nok' : 'ok' };
         });
-        const sure = r.tam(55, 150);
+        // %8 kontrol aceleyle yapılır (12-25 sn): özetteki "hızlı kontrol" göstergesi boş kalmasın; ayrı üreteç
+        const normal = r.tam(55, 150); // r her durumda çekilir: dizinin geri kalanı değişmesin
+        const sure = ra.sayi() < 0.08 ? ra.tam(12, 25) : normal;
         const k = { ekipman: e.kod, kisi: kisi.kod, gun, vardiya: v, baslangic: bas, bitis: bas + sure * 1000, sonuc };
         kontroller.push(k);
         for (const s of sonuc.filter((x) => x.durum === 'nok')) {
@@ -70,12 +72,12 @@ export function ornekGecmis(ana, simdi, gunSayisi = 7) {
           const kapanis = acilis + r.tam(m.renk === 'beyaz' ? 10 : 60, m.renk === 'beyaz' ? 60 : 600) * 60_000;
           const kapali = kapanacak && kapanis <= simdi;
           const kapatan = m.renk === 'beyaz' ? kisi : e.tip === 'sorter' ? teknisyen.find((t) => t.kod === 'K-MKAYA') : r.sec(teknisyen);
-          const durus = m.renk === 'kirmizi' && r.sayi() < 0.12;
+          const durus = (m.renk === 'kirmizi' && r.sayi() < 0.12) || m.emniyet === true; // emniyet maddesi ekipmanı kilitler
           // Sorumlu: beyazda açan operatör; kırmızıda sorter → Murat Kaya, diğerleri çoğunlukla bir teknisyen (bazısı atanmamış).
           const sorumlu = m.renk === 'beyaz' ? kisi.kod : e.tip === 'sorter' ? 'K-MKAYA' : ra.sayi() < 0.8 ? ra.sec(teknisyen).kod : null;
           etiketler.push({
             ekipman: e.kod, renk: m.renk, madde: m.kod, tur: m.tur, aciklama: r.sec(ACIKLAMALAR[m.kod] || ['Kontrolde sorun görüldü']),
-            kisi: kisi.kod, olusturma: acilis, durus, sorumlu, hedef: varsayilanHedef(m.renk, durus, istanbulGunu(acilis)),
+            kisi: kisi.kod, olusturma: acilis, durus, sorumlu, hedef: varsayilanHedef(m.renk, durus, istanbulGunu(acilis), m.emniyet === true),
             durum: kapali ? 'kapali' : 'acik', kapatan: kapali ? kapatan.kod : null, kapanis: kapali ? kapanis : null,
             kapatmaNotu: kapali ? (m.renk === 'beyaz' ? 'Temizlendi / düzeltildi' : 'Parça değiştirildi, test edildi') : null,
           });

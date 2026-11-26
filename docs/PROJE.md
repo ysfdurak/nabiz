@@ -140,7 +140,7 @@ Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 
 ## 7. Testler
 
-`npm test`: 26 test. Tarayıcı duman testi telefon boyutunda, açık ve koyu temada çalışır.
+`npm test`: 27 test. Tarayıcı duman testi telefon boyutunda, açık ve koyu temada çalışır.
 
 | Dosya | Neyi kanıtlıyor |
 | --- | --- |
@@ -167,6 +167,27 @@ Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 | iPhone (Safari): QR, kontrol, fotoğraf | Aynı | **Denenmedi: iPhone yok.** Risk en çok fotoğrafta (kamera izni, HEIC biçimi) | Açık |
 
 **Burada bir test daha yapalım:** QR'ı gerçek telefon kamerasıyla okut. Fotoğraf çekmeyi Android ve iPhone'da dene (`capture=environment` davranışı tarayıcıya göre değişir). Kurum alanında bir kırmızı etiketin Arıza Defteri'nde gerçekten açıldığını gör.
+
+## 7b. Kullanıcı gözüyle (26.11.2026)
+
+V2 ve V2.1'de 6 ekran eklendi (Kayıp, Analiz, A3, sorumlu atama, Geciken, sabah özeti). Teknik testler temizdi (taşma yok, konsol hatası yok). Ekranlar bu kez operatör, teknisyen, şef, ilk kez gelen ziyaretçi, mülakatçı ve bakım uzmanı gözüyle, 390 ve 1350 piksel genişlikte gezildi.
+
+**Teşhis:** Uzun sayfalar sonucu söylemiyordu, bazı bilgiler iki kez gösteriliyordu ve iki kural sahada böyle yürümez.
+
+| Bulgu | Rol | Karar |
+| --- | --- | --- |
+| Kontrolde "Hepsini tamam işaretle" düğmesi | Bakım uzmanı | **Kaldırıldı.** Otonom bakımın özü bakarak kontrol; toplu işaretleme "kâğıt doldurma"yı kolaylaştırır. Yerine Özet'te **Hızlı kontrol** göstergesi: madde başına 6 sn'den kısa süren kontroller ve kimde oldukları (ceza değil, konuşma konusu). |
+| Acil stop arızasına 3 gün hedef | Bakım uzmanı | **Emniyet maddeleri** (fren, çatal, acil stop, bariyer): sorun varsa etiket kırmızı, ekipman duruyor sayılır, hedef aynı gün; formda beyaz seçilemez. Sunucu da aynı kuralı uygular. |
+| Etiketlerde 9 düğme, etiketsiz 3 grup; "Hepsi" ile "Herkes" yan yana | İlk kez gelen | İki adlı satır: **Göster** (Açık · Geciken · Bana atanan · Kapalı) ve **Renk**. |
+| Analiz telefonda 5.835 px, 972 kelime; aynı cümle 20 kartta | Şef, mülakatçı | Üstte tek paragraf sonuç ("forklift, reach truck… için bakım sıklaştırılmalı; streç uzatılabilir"). Kartta yalnız aşınma ve erken dönem türleri; rastgele türler adıyla kısa listede. β açıklaması bir kez, açılır bölümde. **3.378 px, 533 kelime.** |
+| Kayıp sayfası sayılarla açılıyor, "bu ne diyor?" yok | Yönetici | Tek cümle: "planlı sürenin %75'i değerli işe gitti, en büyük kayıp hız (%21): ekipman çalışıyor ama ideal hızın altında." OEE formülü açılır bölüme. |
+| Özet'te geciken etiketler iki kez (sabah özeti önizlemesi + liste) | Şef | Liste kaldı, önizleme açılır bölümde. |
+| Demo şeridi 3 satır, ilk gelen nereden başlayacağını bilmiyor | Mülakatçı | Şerit 1 satır; Ekipman sayfasında demoya özel **5 dakikada dene** (kontrol → geciken → Kayıp/Analiz). |
+| Bakım aralığında "Ekipman başına yılda 229 arıza" | Şef | Kafa karıştırıyordu; yerine duruş maliyeti ve yüzde düşüş. |
+
+**Ders:** Bu bulguların hiçbirini teknik test yakalamadı. "Hepsini tamam" düğmesi çalışıyordu, acil stop etiketi açılıyordu. Sorunu görev odaklı ve sahayı bilen bakış buldu: "operatör bunu nasıl kullanır, bakım şefi buna ne der?"
+
+**Karar bekleyen (gerçekçilik):** Arıza Defteri'nin sentetik verisinde forklift başına yılda yaklaşık 230 arıza var (ortalama arızalar arası süre 31 saat). Bunun 96'sı "akü şarjı bitti". Sahada bir forkliftin bakım ekibi gerektiren arızası ayda birkaç tanedir; akü bitmesi ise arıza değil, operasyon olayıdır (küçük duruş). Seçenekler: yoğunluğu düşürmek ve operatör kaynaklı olayları "küçük duruş" diye ayırmak (analiz için veri azalır, kör deneme yeniden yapılır) ya da olduğu gibi bırakıp dokümanda belirtmek.
 
 ## 8. Bilinen sınırlar ve sonraki adımlar
 
@@ -232,6 +253,7 @@ Cevaplar (önce kendin dene): Hayır, benzetim olarak saklanır · Hayır, 403; 
 | Tarih | Değişiklik |
 | --- | --- |
 | 25.11.2026 | Ortak ölçüm ve geri bildirim (olcum.ysfdurak.com), yalnız nabiz.ysfdurak.com'da. Ekran = adresin ilk parçası (`#/e/F-03` → `e`), işlem = POST yolunun sabit parçaları (`/v1/etiket/12/kapat` → `islem:etiket_kapat`); kimlik, ekipman kodu, not ve fotoğraf gitmez. Kurum kurulumunda betik yüklenmez. Ders: ölçüme ham adres verilseydi her ekipman ayrı bir "ekran" sayılırdı; yönetim sayfası okunmaz hâle gelirdi. |
+| 26.11.2026 | Kullanıcı gözüyle inceleme (bölüm 7b): "Hepsini tamam" kaldırıldı, hızlı kontrol göstergesi; emniyet maddeleri (kırmızı, ekipman duruyor, hedef aynı gün); Etiket filtreleri iki adlı satır; Analiz ve Kayıp tek cümlelik sonuçla açılıyor, Analiz %42 kısaldı; sabah özeti önizlemesi açılır bölümde; demoda "5 dakikada dene". 27 test. |
 | 25.11.2026 | V2.1: Pusula bağlantısı çıkarıldı (çift kayıt). Etikete sorumlu ve hedef tarih: varsayılan hedef kuralı, atama (teknisyen/şef), geciken ve "bana atanan" filtreleri, Özet'te geciken, sorumlusuz kırmızı ve sorumlu başına iş, ekipman listesinde gecikme rozeti; MCP'de `sorumlu` ve `geciken` filtreleri. Örnek veride atama. Kurulum artık soru sormuyor. CI duman testi üç servisle. Aynı gün: şefin sabah özeti (ntfy, 07:30, sorun yoksa gitmez, Özet'te önizleme; kurulum konu üretir). 26 test. |
 | 24.11.2026 | V2: duruş kaydı (süreli ya da devam eden, giden kutusuyla Arıza Defteri'ne), OEE çekirdeği ve Kayıp ekranı (KPI, kayıp şelalesi, günlük OEE çizgisi, 6 büyük kayıp, Pareto, ekipman OEE), Analiz ekranı (Nabız Analiz'den β ve bakım aralığı), Pareto → A3 taslağı (yazdır, metni kopyala), 3 yeni MCP aracı, 6 test + tarayıcı testine V2 adımları, sayfaya meta CSP. Sekmeler: Ekipman · Etiket · Kayıp · Analiz · Özet (QR, Özet'e taşındı). |
 | 24.11.2026 | V1: tip başına kontrol listeleri, QR (SVG), vardiya kontrolü, kırmızı/beyaz etiket ve fotoğraf, rol kuralları, giden kutusu (Pusula MCP, Arıza Defteri API), demo alanları ve sınırları, kurum girişi, özet, 5 araçlı salt okuma MCP, 16 test + tarayıcı testi, Docker sertleştirmesi, kurulum betiği ve Caddy bloğu, güvenlik taraması temiz. Uçtan uca yerel deneme: Pusula işi ve Arıza Defteri kaydı açıldı ve kapandı. |

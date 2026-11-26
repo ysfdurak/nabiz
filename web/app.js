@@ -138,6 +138,11 @@ async function ekipmanSayfasi() {
   sayfa(
     el('div', { class: 'baslik-satir' }, el('h1', {}, 'Ekipman'), el('span', { class: 'soluk' }, `${v.vardiya.no}. vardiya · kontrol ${yapilan}/${beklenen}`)),
     el('p', { class: 'ipucu' }, 'Ekipmanın üzerindeki QR kodu telefon kamerasıyla okutursan doğrudan kartı açılır.'),
+    // Demo ziyaretçisi (mülakatçı) 5 dakikada değeri görsün: üç adımlı yol
+    S.demo ? el('div', { class: 'dene' }, el('strong', {}, '5 dakikada dene'), el('ol', {},
+      el('li', {}, el('a', { href: '#/kontrol/RT-03' }, 'RT-03 vardiya kontrolünü yap'), ', bir maddeyi "Sorun var" işaretle ve etiket aç.'),
+      el('li', {}, el('a', { href: '#/etiketler?durum=acik&ek=geciken' }, 'Geciken etiketlere'), ' bak; teknisyen olarak birine sorumlu ata.'),
+      el('li', {}, el('a', { href: '#/kayip' }, 'Kayıp'), ' ve ', el('a', { href: '#/analiz' }, 'Analiz'), ': OEE, bakım aralığı önerisi, Pareto\'dan A3 taslağı.'))) : null,
     ...bolgeler.map((b) => el('section', { class: 'grup' },
       el('h2', {}, b),
       el('ul', { class: 'liste' }, ...v.ekipmanlar.filter((e) => e.bolge === b).map((e) => el('li', {},
@@ -189,7 +194,7 @@ function etiketListesi(liste) {
       el('span', { class: 'satir-ana' }, rozet(t.renk, t.renk === 'kirmizi' ? 'Kırmızı' : 'Beyaz'), ' ', el('strong', {}, t.ekipman), ' ', t.aciklama),
       el('span', { class: 'satir-yan soluk' },
         t.durum === 'acik' ? `${gunSaat(t.olusturma)} · ${t.sorumluAd ? `Sorumlu: ${t.sorumluAd}` : t.renk === 'kirmizi' ? 'Sorumlu yok' : t.kisiAd}` : `Kapandı ${gunSaat(t.kapanis)} · ${t.kapatanAd}`,
-        ' ', hedefRozeti(t), t.durus ? [' ', rozet('kirmizi koyu', 'Duruyor')] : null)))));
+        ' ', hedefRozeti(t), t.emniyet ? [' ', rozet('kirmizi koyu', 'Emniyet')] : t.durus ? [' ', rozet('kirmizi koyu', 'Duruyor')] : null)))));
 }
 
 function durusSatiri(d) {
@@ -265,6 +270,15 @@ function oeeCizgisi(gunler) {
     el('figcaption', { class: 'soluk' }, 'Günlük depo OEE. Kesik çizgi: dünya sınıfı %85 (yol gösterici).'));
 }
 
+/** Kayıp sayfasının tek cümlelik sonucu: yönetici "bu ne diyor?" diye sorar. */
+function kayipCumlesi(d, enBuyukTur, gun) {
+  const t = d.planliDk || 1;
+  const kayip = [['hız', d.kayipDk.hiz, 'ekipman çalışıyor ama ideal hızın altında'], ['duruş', d.kayipDk.durus, 'ekipman duruyor'], ['kalite', d.kayipDk.kalite, 'hatalı iş']]
+    .sort((a, b) => b[1] - a[1])[0];
+  return `Son ${gun} günde planlı sürenin ${yuzde(d.kayipDk.deger / t)}'i değerli işe gitti. En büyük kayıp ${kayip[0]} (${yuzde(kayip[1] / t)}): ${kayip[2]}.`
+    + (enBuyukTur ? ` Duruşta ilk sıradaki tür ${enBuyukTur.kod} (${enBuyukTur.ad.toLocaleLowerCase('tr-TR')}); A3 için aşağıdaki listeden aç.` : '');
+}
+
 async function kayipSayfasi(q) {
   const gun = q.get('gun') || '30';
   const v = await api(`/v1/kayip?gun=${encodeURIComponent(gun)}`);
@@ -281,7 +295,7 @@ async function kayipSayfasi(q) {
   sayfa(
     el('div', { class: 'baslik-satir' }, el('h1', {}, 'Kayıp ve OEE'),
       el('span', { class: 'filtreler' }, ...['7', '30', '90'].map((g) => el('a', { class: 'filtre' + (g === gun ? ' secili' : ''), href: `#/kayip?gun=${g}` }, `${g} gün`)))),
-    el('p', { class: 'ipucu' }, 'Depodaki bütün ekipman, Arıza Defteri verisi (sentetik). OEE = kullanılabilirlik × performans × kalite.'),
+    el('p', { class: 'sonuc' }, kayipCumlesi(d, v.pareto[0], gun)),
     el('div', { class: 'kpiler' },
       kpi('Depo OEE', yuzde1(d.oee), `dünya sınıfı %${v.dunyaSinifi.oee * 100}`, d.oee),
       kpi('Kullanılabilirlik', yuzde1(d.kullanilabilirlik), `${saatDk(d.durusDk)} duruş`, d.kullanilabilirlik),
@@ -295,6 +309,8 @@ async function kayipSayfasi(q) {
         el('li', {}, el('i', { class: 'hiz' }), `Hız ${yuzde(d.kayipDk.hiz / toplamDk)}`),
         el('li', {}, el('i', { class: 'kalite' }), `Kalite ${yuzde1(d.kayipDk.kalite / toplamDk)}`))),
     v.oee.gun.length > 1 ? el('section', { class: 'grup' }, el('h2', {}, 'Günlük OEE'), oeeCizgisi(v.oee.gun)) : null,
+    el('details', { class: 'yontem' }, el('summary', {}, 'OEE nasıl hesaplanıyor?'),
+      el('p', {}, 'OEE = kullanılabilirlik × performans × kalite. Kullanılabilirlik: planlı sürenin duruş dışında kalan payı. Performans: çalışılan sürede yapılan işin ideal hıza oranı. Kalite: hatasız işin payı. Oranların ortalaması alınmaz; süreler ve adetler toplanır, oran sonra hesaplanır. Veri: Arıza Defteri vardiya üretimi (sentetik).')),
     el('section', { class: 'grup' }, el('h2', {}, '6 büyük kayıp (duruş süresi)'),
       el('ul', { class: 'liste sade cubuklu' }, ...v.kayiplar.map((k) => el('li', {}, el('span', {}, k.ad), cubuk(k.durusDk / enBuyuk), el('span', { class: 'sag' }, `${saatDk(k.durusDk)} · ${k.adet}`))))),
     el('section', { class: 'grup' }, el('h2', {}, 'Pareto: en çok duruş yaratan türler'),
@@ -323,25 +339,44 @@ async function analizSayfasi() {
       svg('line', { x1: x(Math.max(0.25, t.beta_alt)), x2: x(Math.min(4, t.beta_ust)), y1: 11, y2: 11, class: `aralik ${t.sinif}` }),
       svg('circle', { cx: x(Math.min(4, Math.max(0.25, t.beta))), cy: 11, r: 4, class: `nokta ${t.sinif}` }));
   };
+  const aralikMetni = (t) => (t.sinirda && t.onerilen_gun >= t.mevcut_gun ? 'uzatılabilir' : t.sinirda ? `${Math.round(t.onerilen_gun)} gün veya daha sık` : `${Math.round(t.onerilen_gun)} gün`);
+  const kisalt = r.tipler.filter((t) => t.onerilen_gun < t.mevcut_gun * 0.9);
+  const uzat = r.tipler.filter((t) => t.onerilen_gun > t.mevcut_gun * 1.1);
+  const say = (s) => r.turler.filter((t) => t.sinif === s).length;
+  const liste = (l) => l.map((t) => t.ad.toLocaleLowerCase('tr-TR')).join(', ').replace(/, ([^,]*)$/, ' ve $1');
+  const sonuc = [
+    kisalt.length ? `${liste(kisalt)} için bakım sıklaştırılmalı (${kisalt.map((t) => `${sayi(t.mevcut_gun)} → ${Math.round(t.onerilen_gun)}`).join(', ')} gün).` : 'Hiçbir tipte bakımı sıklaştırmak gerekmiyor.',
+    uzat.length ? `${liste(uzat)} için aralık uzatılabilir.` : '',
+    `${say('asinma')} arıza türü aşınıyor (planlı bakımla önlenir), ${say('rastgele')} tür rastgele (bakım sıklığı etkilemez; kontrol listesi ve kök neden analizi azaltır)${say('erken') ? `, ${say('erken')} türde bakımdan hemen sonra arıza artıyor (bakım işinin kalitesine bakılmalı)` : ''}.`,
+  ].filter(Boolean).join(' ').replace(/^./, (h) => h.toLocaleUpperCase('tr-TR'));
+  const turKarti = (t) => el('li', { class: 'tur-satir' },
+    el('div', { class: 'tur-ust' }, el('a', { href: `#/a3/${t.tur}` }, el('strong', {}, t.tur)), ' ', t.ad, ' ', rozet(SINIF[t.sinif][1], SINIF[t.sinif][0])),
+    el('div', { class: 'tur-alt' }, betaCubugu(t), el('span', { class: 'soluk' }, `β ${t.beta == null ? '–' : sayi(t.beta, 2)} · ${t.n} arıza · ort. ${sayi(t.ortSureDk)} dk`)));
   sayfa(
-    el('h1', {}, 'Güvenilirlik ve bakım aralığı'),
-    el('p', { class: 'ipucu' }, 'Nabız Analiz (Python) her arıza türünün bakım döngüsündeki davranışını ölçer: aşınma (β > 1) planlı bakımla önlenir, rastgele (β ≈ 1) önlenmez, erken dönem (β < 1) bakım kalitesine işaret eder. ', el('small', {}, `Rapor: ${gunSaat(r.olusturma)} · ${r.donemGun} gün · ${sayi(r.kayit)} kayıt`)),
+    el('h1', {}, 'Bakım aralığı ve arıza türleri'),
+    el('p', { class: 'sonuc' }, sonuc),
     r.uyari ? el('p', { class: 'durum sari' }, r.uyari) : null,
     el('section', { class: 'grup' }, el('h2', {}, 'Bakım aralığı önerisi'),
       el('ul', { class: 'liste sade' }, ...r.tipler.map((t) => el('li', { class: 'aralik-oneri' },
-        el('div', { class: 'baslik-satir' }, el('strong', {}, t.ad), el('span', { class: 'aralik-sayi' }, `${sayi(t.mevcut_gun)} → `, el('b', {}, `${Math.round(t.onerilen_gun)} gün`))),
+        el('div', { class: 'baslik-satir' }, el('strong', {}, t.ad), el('span', { class: 'aralik-sayi' }, `${sayi(t.mevcut_gun)} gün → `, el('b', {}, aralikMetni(t)))),
         el('p', {}, t.gerekce),
-        el('p', { class: 'soluk' }, `Ekipman başına yılda beklenen arıza: ${sayi(t.ariza_yil_mevcut)} → ${sayi(t.ariza_yil_onerilen)}. Maliyet (duruş dk/gün): ${sayi(t.maliyet_mevcut, 1)} → ${sayi(t.maliyet_onerilen, 1)}. Aşınan türler: ${t.asinanTurler.join(', ') || 'yok'}.`))))),
+        el('p', { class: 'soluk' }, `Duruş maliyeti (dk/gün, ekipman başına): ${sayi(t.maliyet_mevcut, 1)} → ${sayi(t.maliyet_onerilen, 1)}${t.maliyet_mevcut ? ` (%${Math.round((1 - t.maliyet_onerilen / t.maliyet_mevcut) * 100)} az)` : ''}. Aralığı belirleyen aşınan türler: ${t.asinanTurler.join(', ') || 'yok'}.`))))),
     el('section', { class: 'grup' }, el('h2', {}, 'Arıza türleri'),
-      el('p', { class: 'ipucu' }, 'Nokta: β tahmini; çizgi: %90 güven aralığı; dikey çizgi: β = 1. Aralık 1\'i kesiyorsa tür "rastgele" sayılır.'),
+      el('p', { class: 'ipucu' }, 'Kartta yalnız bakımla ilgisi olanlar (aşınma, erken dönem) gösterilir; rastgele türler adıyla listelenir. Bir türe dokun: A3 taslağı açılır.'),
       ...Object.keys(S.tipler).map((tip) => {
         const l = r.turler.filter((t) => t.tip === tip);
-        return l.length ? el('div', { class: 'tur-grup' }, el('h3', {}, tipAd[tip]), el('ul', { class: 'liste sade' }, ...l.map((t) => el('li', { class: 'tur-satir' },
-          el('div', { class: 'tur-ust' }, el('a', { href: `#/a3/${t.tur}` }, el('strong', {}, t.tur)), ' ', t.ad, ' ', rozet(SINIF[t.sinif][1], SINIF[t.sinif][0])),
-          el('div', { class: 'tur-alt' }, betaCubugu(t), el('span', { class: 'soluk' }, `β ${t.beta == null ? '–' : sayi(t.beta, 2)} · ${t.n} arıza · ort. ${sayi(t.ortSureDk)} dk`)),
-          el('p', { class: 'soluk' }, t.yorum))))) : null;
+        if (!l.length) return null;
+        const onemli = l.filter((t) => ['asinma', 'erken'].includes(t.sinif));
+        const diger = l.filter((t) => !['asinma', 'erken'].includes(t.sinif));
+        return el('div', { class: 'tur-grup' }, el('h3', {}, tipAd[tip]),
+          onemli.length ? el('ul', { class: 'liste sade' }, ...onemli.map(turKarti)) : null,
+          diger.length ? el('div', {}, el('small', { class: 'soluk' }, `Rastgele ya da verisi yetersiz (${diger.length}):`),
+            el('ul', { class: 'tur-kisa' }, ...diger.map((t) => el('li', {}, el('a', { href: `#/a3/${t.tur}` }, t.tur), ` ${t.ad}${t.sinif === 'yetersiz' ? ' (veri az)' : ''}`)))) : null);
       })),
-    el('details', { class: 'yontem' }, el('summary', {}, 'Yöntem'), el('p', {}, r.yontem)),
+    el('details', { class: 'yontem' }, el('summary', {}, 'β nedir, nasıl okunur?'),
+      el('p', {}, 'β, bakımdan sonra arıza sıklığının zamanla nasıl değiştiğini gösterir. β > 1 aşınma: bakımdan uzaklaştıkça arıza sıklaşır, planlı bakım önler. β ≈ 1 rastgele: zamandan bağımsız, bakım sıklığı etkilemez. β < 1 erken dönem: bakımdan hemen sonra arıza artar, bakım işinin kalitesine bakılmalı. Grafikte nokta β tahmini, çizgi %90 güven aralığı, dikey çizgi β = 1; aralık 1\'i kesiyorsa tür rastgele sayılır ve bakım aralığı hesabında β = 1 alınır.'),
+      el('p', {}, r.yontem),
+      el('p', { class: 'soluk' }, `Rapor: ${gunSaat(r.olusturma)} · ${r.donemGun} gün · ${sayi(r.kayit)} kayıt · Nabız Analiz (Python)`)),
   );
 }
 
@@ -383,10 +418,8 @@ async function kontrolSayfasi(kod) {
     };
     tamam.addEventListener('click', () => sec('ok'));
     sorun.addEventListener('click', () => sec('nok'));
-    return el('li', { class: 'madde' }, el('p', {}, m.metin), el('div', { class: 'secimler' }, tamam, sorun));
+    return el('li', { class: 'madde' }, el('p', {}, m.emniyet ? [rozet('kirmizi koyu', 'Emniyet'), ' '] : null, m.metin), el('div', { class: 'secimler' }, tamam, sorun));
   });
-  const tumuTamam = el('button', { type: 'button', class: 'baglanti' }, 'Hepsini "tamam" işaretle');
-  tumuTamam.addEventListener('click', () => maddeler.forEach((li) => li.querySelector('.tamam').click()));
   kaydet.addEventListener('click', async () => {
     const k = kisiZorunlu();
     if (!k) return;
@@ -402,8 +435,7 @@ async function kontrolSayfasi(kod) {
   sayfa(
     geri(`#/e/${kod}`, e.kod),
     el('div', { class: 'baslik-satir' }, el('h1', {}, `${e.kod} vardiya kontrolü`), sayac),
-    el('p', { class: 'ipucu' }, 'Her maddeye bak ve işaretle. 1-2 dakika sürer. Sorun gördüğün maddeye etiket açacaksın.'),
-    tumuTamam,
+    el('p', { class: 'ipucu' }, 'Her maddeye bakarak tek tek işaretle; 1-2 dakika sürer. Sorun gördüğün maddeye etiket açacaksın. Emniyet maddesinde sorun varsa ekipmanı kullanma.'),
     el('ol', { class: 'maddeler' }, ...maddeler),
     kaydet,
   );
@@ -416,7 +448,7 @@ function kontrolSonucu(kod, s) {
     s.sorunlu.length ? el('ul', { class: 'liste' }, ...s.sorunlu.map((m) => el('li', {},
       el('a', { class: 'satir', href: `#/etiket-ac/${kod}?madde=${encodeURIComponent(m.kod)}&kontrol=${encodeURIComponent(s.kontrol.id)}` },
         el('span', { class: 'satir-ana' }, m.metin),
-        el('span', { class: 'satir-yan' }, rozet(m.renk, m.renk === 'kirmizi' ? 'Kırmızı etiket aç' : 'Beyaz etiket aç')))))) : null,
+        el('span', { class: 'satir-yan' }, m.emniyet ? [rozet('kirmizi koyu', 'Emniyet: ekipmanı kullanma'), ' '] : null, rozet(m.renk, m.renk === 'kirmizi' ? 'Kırmızı etiket aç' : 'Beyaz etiket aç')))))) : null,
     el('div', { class: 'dugmeler' }, el('a', { class: 'dugme', href: `#/e/${kod}` }, 'Ekipman kartına dön'), el('a', { class: 'dugme', href: '#/' }, 'Ekipman listesi')),
   );
 }
@@ -464,11 +496,18 @@ function etiketAcSayfasi(kod, q) {
       ...sorumlular(renk()).map((x) => el('option', { value: x.kod }, `${x.ad} (${ROL[x.rol]})`)));
     if ([...sorumluSec.options].some((o) => o.value === onceki)) sorumluSec.value = onceki;
   };
+  const emniyetUyari = el('p', { class: 'durum kirmizi gizli' }, 'Emniyet maddesi: ekipmanı kullanma, şefe haber ver. Etiket kırmızı açılır, ekipman duruyor sayılır, hedef bugün.');
   const gonder = el('button', { type: 'submit', class: 'dugme birincil genis' }, 'Etiketi aç');
   let fotoBlob = null;
 
   const renk = () => document.querySelector('input[name=renk]:checked')?.value;
   const alanlariGuncelle = () => {
+    // Emniyet maddesi: kırmızı ve "çalışamıyor" zorunlu (sunucu da aynı kuralı uygular)
+    const emniyet = liste.find((x) => x.kod === maddeSec.value)?.emniyet === true;
+    emniyetUyari.classList.toggle('gizli', !emniyet);
+    renkSecimi.forEach((r) => { r.querySelector('input').disabled = emniyet && r.querySelector('input').value !== 'kirmizi'; });
+    if (emniyet) { document.querySelector('input[name=renk][value=kirmizi]').checked = true; durus.checked = true; }
+    durus.disabled = emniyet;
     durusAlani.classList.toggle('gizli', renk() !== 'kirmizi');
     if (renk() !== 'kirmizi') durus.checked = false;
     turAlani.classList.toggle('gizli', !(durus.checked && !maddeSec.value));
@@ -516,6 +555,7 @@ function etiketAcSayfasi(kod, q) {
       gonder.disabled = false;
     }
   } },
+  emniyetUyari,
   el('fieldset', { class: 'renkler' }, el('legend', {}, 'Etiket rengi'), ...renkSecimi),
   el('div', { class: 'alan' }, el('label', { for: 'madde' }, 'Kontrol maddesi'), maddeSec),
   el('div', { class: 'alan' }, el('label', { for: 'aciklama' }, 'Açıklama'), aciklama),
@@ -599,11 +639,18 @@ async function etiketlerSayfasi(q) {
   if (sorumluQ && ek !== 'benim') p.set('sorumlu', sorumluQ);
   const v = await api(`/v1/etiket?${p}`);
   const secim = { durum, renk, ek };
-  const filtre = (ad, deger, metin) => el('a', { class: 'filtre' + (secim[ad] === deger ? ' secili' : ''), href: `#/etiketler?${new URLSearchParams({ ...secim, [ad]: deger, ...(ad === 'ek' && deger === 'geciken' ? { durum: 'acik' } : {}) })}` }, metin);
+  const filtre = (ad, deger, metin) => el('a', { class: 'filtre' + (secim[ad] === deger ? ' secili' : ''), href: `#/etiketler?${new URLSearchParams({ ...secim, [ad]: deger })}` }, metin);
+  // "Göster": durum ve ek tek seçimde birleşir (kapalı + geciken anlamsız)
+  const secili = durum === 'kapali' ? 'kapali' : ek || 'acik';
+  const gorunum = (g, metin) => el('a', { class: 'filtre' + (secili === g ? ' secili' : ''),
+    href: `#/etiketler?${new URLSearchParams({ renk, durum: g === 'kapali' ? 'kapali' : 'acik', ek: ['geciken', 'benim'].includes(g) ? g : '' })}` }, metin);
   sayfa(
     el('h1', {}, 'Etiketler'),
-    el('div', { class: 'filtreler' }, filtre('durum', 'acik', 'Açık'), filtre('durum', 'kapali', 'Kapalı'), el('span', { class: 'ayrac' }), filtre('renk', '', 'Hepsi'), filtre('renk', 'kirmizi', 'Kırmızı'), filtre('renk', 'beyaz', 'Beyaz'),
-      el('span', { class: 'ayrac' }), filtre('ek', '', 'Herkes'), filtre('ek', 'geciken', 'Geciken'), ben ? filtre('ek', 'benim', 'Bana atanan') : null),
+    // İki satır, adlı: "hangi etiketler" (asıl soru) ve "hangi renk". Eskiden 9 düğme etiketsiz 3 gruptaydı (Hepsi ile Herkes yan yana).
+    el('div', { class: 'filtre-satir' }, el('span', { class: 'filtre-ad' }, 'Göster'),
+      el('span', { class: 'filtreler' }, gorunum('acik', 'Açık'), gorunum('geciken', 'Geciken'), ben ? gorunum('benim', 'Bana atanan') : null, gorunum('kapali', 'Kapalı'))),
+    el('div', { class: 'filtre-satir' }, el('span', { class: 'filtre-ad' }, 'Renk'),
+      el('span', { class: 'filtreler' }, filtre('renk', '', 'Hepsi'), filtre('renk', 'kirmizi', 'Kırmızı'), filtre('renk', 'beyaz', 'Beyaz'))),
     el('p', { class: 'ipucu' }, sorumluQ && ek !== 'benim' ? `Sorumlu: ${S.kisiler.find((x) => x.kod === sorumluQ)?.ad ?? sorumluQ} · ${v.etiketler.length} etiket`
       : durum === 'acik' && renk === 'kirmizi' ? 'Bakım ekibinin iş listesi: en eskisi en altta.' : `${v.etiketler.length} etiket`),
     v.etiketler.length ? etiketListesi(v.etiketler) : el('p', { class: 'soluk' }, 'Bu filtrede etiket yok.'),
@@ -624,12 +671,13 @@ async function ozetSayfasi(q) {
       kpi('Açık beyaz', String(o.acik.beyaz), 'operatörde'),
       kpi('Geciken', String(o.acik.geciken), 'hedef tarihi geçmiş açık etiket'),
       kpi('Sorumlusuz kırmızı', String(o.acik.sorumsuzKirmizi), 'atama bekliyor'),
+      kpi('Hızlı kontrol', String(o.hizliKontrol.adet), o.hizliKontrol.adet ? `bakılmadan işaretlenmiş olabilir · ${o.hizliKontrol.kisiler.map((x) => `${x.ad} ${x.adet}`).join(', ')}` : 'madde başına 6 sn altı yok'),
       kpi('Kapanma (kırmızı)', o.ortKapanmaSaat.kirmizi == null ? '–' : `${o.ortKapanmaSaat.kirmizi.toLocaleString('tr-TR')} sa`, 'ortalama'),
       kpi('Kapanma (beyaz)', o.ortKapanmaSaat.beyaz == null ? '–' : `${o.ortKapanmaSaat.beyaz.toLocaleString('tr-TR')} sa`, 'ortalama')),
-    el('section', { class: 'grup' }, el('h2', {}, 'Şefin sabah özeti'),
+    el('section', { class: 'grup' }, el('h2', {}, 'Geciken etiketler'), o.gecikenler.length ? etiketListesi(o.gecikenler) : el('p', { class: 'soluk' }, 'Geciken etiket yok.')),
+    el('details', { class: 'grup bildirim-ac' }, el('summary', {}, `Şefin sabah bildirimi: ${so.gonderilecek ? so.baslik : 'bugün gönderilmez'}`),
       el('p', { class: 'ipucu' }, S.demo ? 'Kurulumda her sabah şefin telefonuna bildirim olarak gider. Demoda yalnız burada görünür.' : 'Her sabah şefin telefonuna bildirim olarak gider (BILDIRIM_URL tanımlıysa).'),
       el('div', { class: 'bildirim-onizleme' }, el('strong', {}, so.baslik), el('pre', {}, so.gonderilecek ? so.metin : `${so.metin} Bugün bildirim gönderilmez.`))),
-    el('section', { class: 'grup' }, el('h2', {}, 'Geciken etiketler'), o.gecikenler.length ? etiketListesi(o.gecikenler) : el('p', { class: 'soluk' }, 'Geciken etiket yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'Bugün eksik kontroller'),
       o.bugunUyum.eksik.length ? el('ul', { class: 'liste sade' }, ...o.bugunUyum.eksik.map((x) => el('li', {}, el('a', { href: `#/e/${x.kod}` }, x.kod), ` · ${x.vardiyalar.map((v) => `${v}. vardiya`).join(', ')}`))) : el('p', { class: 'soluk' }, 'Eksik kontrol yok.')),
     el('section', { class: 'grup' }, el('h2', {}, 'En sık sorunlu maddeler'),
@@ -708,7 +756,7 @@ async function basla() {
   }
   const serit = $('demo-serit');
   serit.classList.toggle('gizli', !S.demo);
-  if (S.demo) serit.textContent = 'Deneme alanı: kayıtların yalnız sana görünür ve 72 saat sonra silinir. Arıza bildirimleri gerçek Arıza Defteri\'ne gitmez, gidecek kayıt gösterilir. Veriler sentetiktir.';
+  if (S.demo) serit.textContent = 'Deneme alanı: kayıtların yalnız sana görünür, 72 saatte silinir. Veriler sentetik.';
   $('giris-baglanti').classList.toggle('gizli', !(S.demo && S.girisVar));
   kisiDugmesi();
   if (!kisi()) kisiSec();

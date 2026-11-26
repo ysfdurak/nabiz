@@ -43,7 +43,9 @@ with sync_playwright() as p:
         s.screenshot(path=str(cikti / "kart.png"), full_page=True)
         s.goto(adres + "#/kontrol/RT-03")
         s.wait_for_selector(".madde")
-        s.get_by_role("button", name='Hepsini "tamam" işaretle').click()
+        assert s.get_by_text('Hepsini "tamam"').count() == 0, "toplu işaretleme yok (bakmadan işaretlemeyi kolaylaştırır)"
+        for i in range(s.locator(".madde").count()):
+            s.locator(".madde").nth(i).get_by_role("button", name="Tamam").click()
         s.locator(".madde").nth(1).get_by_role("button", name="Sorun var").click()
         s.screenshot(path=str(cikti / "kontrol.png"), full_page=True)
         s.get_by_role("button", name="Kaydet").click()
@@ -103,20 +105,32 @@ with sync_playwright() as p:
         s.wait_for_selector(".durus")
         s.goto(adres + "#/kayip")
         s.wait_for_selector(".selale")
+        assert "En büyük kayıp" in s.inner_text(".sonuc"), "Kayıp sayfası tek cümlelik sonuçla açılmalı"
         s.wait_for_selector("svg polyline")
         s.screenshot(path=str(cikti / "kayip.png"), full_page=True)
         s.goto(adres + "#/analiz")
         s.wait_for_selector("svg.beta")
+        assert "uzatılabilir" in s.inner_text(".sonuc") or "sıklaştırılmalı" in s.inner_text(".sonuc")
+        assert s.locator(".tur-kisa li").count() >= 5, "rastgele türler kısa listede"
         s.screenshot(path=str(cikti / "analiz.png"), full_page=True)
         s.locator(".tur-satir a", has_text="RT-MAS").click()
         s.wait_for_selector(".a3-bolum")
         assert s.locator(".a3-bolum").count() == 7
         s.screenshot(path=str(cikti / "a3.png"), full_page=True)
+        # Emniyet maddesi: beyaz seçilemez, "çalışamıyor" işaretli ve değiştirilemez
+        s.goto(adres + "#/etiket-ac/KV-01?madde=acil")
+        s.wait_for_selector("#aciklama")
+        assert s.locator("input[name=renk][value=beyaz]").is_disabled()
+        assert s.locator("#durus").is_checked() and s.locator("#durus").is_disabled()
+        assert s.get_by_text("Emniyet maddesi: ekipmanı kullanma").is_visible()
+        s.screenshot(path=str(cikti / "etiket-emniyet.png"))
         s.goto(adres + "#/ozet")
         s.wait_for_selector(".kpi")
         s.wait_for_selector("h2:has-text('Sorumlu başına açık iş')")
+        s.locator("details.bildirim-ac summary").click()
         s.wait_for_selector(".bildirim-onizleme pre")
         assert "geciken" in s.inner_text(".bildirim-onizleme"), "sabah özeti önizlemesi geciken etiketleri göstermeli"
+        assert s.locator(".kpi:has-text('Hızlı kontrol')").count() == 1
         s.screenshot(path=str(cikti / "ozet.png"), full_page=True)
         s.goto(adres + "#/qr")
         s.wait_for_selector(".qr img")
