@@ -160,7 +160,7 @@ test('sorumlu ve hedef tarih: kurallar, atama yetkisi, gecikme, filtreler ve öz
     assert.ok(o.govde.sorumluYuku.find((x) => x.kod === 'K-MKAYA').acik >= 1);
     const so = await a('/v1/sabah-ozeti');
     assert.equal(so.govde.gonderilecek, true, 'örnek veride geciken var');
-    assert.match(so.govde.baslik, new RegExp(`sabah özeti: ${geciken.govde.etiketler.length} geciken`));
+    assert.match(so.govde.baslik, new RegExp(`sabah özeti: ${geciken.govde.etiketler.length} geciken etiket`));
     assert.equal(so.govde.baglanti, 'https://nabiz.ornek.test/#/etiketler?durum=acik&ek=geciken');
     const kapandi = await a(`/v1/etiket/${e.govde.id}/kapat`, { json: { kisi: 'K-MKAYA', not: 'Klape ayarlandı' } });
     assert.equal(kapandi.durum, 200);
@@ -244,9 +244,13 @@ test('QR SVG ve MCP (salt okuma, kurum alanı)', async () => {
     const rpc = (govde, anahtar = MCP) => a('/mcp', { json: govde, headers: { accept: 'application/json, text/event-stream', ...(anahtar ? { authorization: `Bearer ${anahtar}` } : {}) } });
     assert.equal((await rpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, null)).durum, 401);
     const l = await rpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
-    assert.deepEqual(l.govde.result.tools.map((t) => t.name).sort(), ['a3_taslagi', 'ekipman_durumu', 'ekipman_karti', 'etiket_detayi', 'etiketleri_listele', 'guvenilirlik', 'oee_ve_kayiplar', 'tpm_ozeti']);
+    assert.deepEqual(l.govde.result.tools.map((t) => t.name).sort(), ['a3_taslagi', 'bakim_durumu', 'ekipman_durumu', 'ekipman_karti', 'etiket_detayi', 'etiketleri_listele', 'guvenilirlik', 'oee_ve_kayiplar', 'otonom_bakim_olgunlugu', 'tpm_ozeti']);
     assert.ok(l.govde.result.tools.every((t) => t.annotations.readOnlyHint));
     const c = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'ekipman_durumu', arguments: {} } });
     assert.equal(JSON.parse(c.govde.result.content[0].text).ekipmanlar.length, 18);
+    const ol = await rpc({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'otonom_bakim_olgunlugu', arguments: {} } });
+    const olg = JSON.parse(ol.govde.result.content[0].text);
+    assert.equal(olg.tipler.length, 5);
+    assert.ok(olg.tipler.every((t) => t.adimlar.length === 7 && t.adimlar.slice(4).every((x) => x.durum === 'olculmuyor')));
   } finally { await kapat(); }
 });

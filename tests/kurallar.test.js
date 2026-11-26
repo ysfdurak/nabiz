@@ -76,3 +76,43 @@ test('emniyet ve hızlı kontrol kuralları', async () => {
   assert.equal(hizliKontrolMu({ baslangic: 0, bitis: 29_000 }, 5), true, '5 madde 29 sn');
   assert.equal(hizliKontrolMu({ baslangic: 0, bitis: 30_000 }, 5), false);
 });
+
+test('V3 bakım tablosu: takvim gecikmesi, öneriye göre, yaklaşan; sıralama', async () => {
+  const { bakimTablosu } = await import('../src/cekirdek/bakim.js');
+  const e = (kod, tip, sonBakim, sonrakiPlan, gecikmede = false, gecikmeGun = 0) => ({ kod, ad: kod, tip, tipAd: tip, bakim: { sonBakim, sonrakiPlan, gecikmede, gecikmeGun, bakimdanBeriSaat: 100, periyotSaat: 450 } });
+  const oneriler = [{ tip: 'forklift', mevcut_gun: 30, onerilen_gun: 12.1, sinirda: false, sayac: { onerilen_saat: 177.4 } },
+    { tip: 'strec', mevcut_gun: 60, onerilen_gun: 180, sinirda: true }];
+  const t = bakimTablosu([
+    e('FL-01', 'forklift', '2026-11-20', '2026-12-20'),          // 6 gün: normal
+    e('FL-02', 'forklift', '2026-11-05', '2026-12-05'),          // 21 gün > 12: öneriye göre
+    e('FL-03', 'forklift', '2026-10-20', '2026-11-19', true, 7), // takvim gecikti
+    e('ST-01', 'strec', '2026-10-01', '2026-11-28'),             // 2 gün kaldı; öneri "uzat" uyarı üretmez
+  ], oneriler, '2026-11-26');
+  assert.deepEqual(t.satirlar.map((x) => [x.kod, x.durum]), [['FL-03', 'gecikti'], ['FL-02', 'oneriye_gore'], ['ST-01', 'yaklasiyor'], ['FL-01', 'normal']]);
+  assert.deepEqual(t.sayilar, { gecikti: 1, oneriyeGore: 1, yaklasiyor: 1 });
+  assert.equal(t.satirlar.find((x) => x.kod === 'FL-02').onerilenSaat, 177);
+  assert.equal(bakimTablosu([e('FL-02', 'forklift', '2026-11-05', '2026-12-05')], null, '2026-11-26').satirlar[0].durum, 'normal', 'analiz yoksa yalnız takvim');
+});
+
+test('V3 olgunluk: adımlar sırayla, veri azsa durur, 5-7 ölçülmüyor', async () => {
+  const { olgunluk } = await import('../src/cekirdek/olgunluk.js');
+  const { anMs, gunEkle } = await import('../src/cekirdek/zaman.js');
+  const bugun = '2026-11-26';
+  const ekipmanlar = [{ kod: 'FL-01', tip: 'forklift' }];
+  const tipler = { forklift: { ad: 'Forklift', vardiyalar: [1, 2, 3] } };
+  const kontroller = [];
+  for (let i = 0; i < 30; i++) for (const v of [1, 2, 3]) {
+    const g = gunEkle(bugun, -i); const bas = anMs(g, v === 3 ? 0 : v === 1 ? 8 : 16, 10);
+    if (bas > anMs(bugun, 12)) continue;
+    kontroller.push({ ekipman: 'FL-01', gun: g, vardiya: v, baslangic: bas, bitis: bas + 90_000 });
+  }
+  const beyaz = Array.from({ length: 6 }, (_, i) => ({ ekipman: 'FL-01', renk: 'beyaz', durum: 'kapali', hedef: gunEkle(bugun, -i), kapanis: anMs(gunEkle(bugun, -i - 1), 10) }));
+  const kirmizi = Array.from({ length: 5 }, (_, i) => ({ ekipman: 'FL-01', renk: 'kirmizi', durum: 'kapali', kontrol: i < 2 ? 'K-1' : null }));
+  const o = olgunluk({ kontroller, etiketler: [...beyaz, ...kirmizi], ekipmanlar, tipler, bugun, simdi: anMs(bugun, 12) })[0];
+  assert.deepEqual(o.adimlar.map((a) => a.durum), ['gecti', 'gecti', 'gecti', 'devam', 'olculmuyor', 'olculmuyor', 'olculmuyor']);
+  assert.equal(o.mevcutAdim, 4);
+  assert.match(o.adimlar[3].kanit, /Vardiya kontrolünde bulunan kırmızı etiket: %40/);
+  // 10'dan az kontrol: veri az
+  const az = olgunluk({ kontroller: kontroller.slice(0, 5), etiketler: [], ekipmanlar, tipler, bugun, simdi: anMs(bugun, 12) })[0];
+  assert.deepEqual(az.adimlar.slice(0, 3).map((a) => a.durum), ['veri_az', 'bekliyor', 'bekliyor']);
+});

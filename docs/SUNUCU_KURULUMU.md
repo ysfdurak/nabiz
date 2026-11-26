@@ -16,7 +16,7 @@ Ortak altyapı (VPS, Docker, Caddy, `web` ağı): [ysfdurak.com → sunucu/READM
 
 ## 2. Nabız Analiz (V2, Python)
 
-`bash ~/ysfdurak.com/sunucu/kurulum-nabiz-analiz.sh`: dışarı açılmaz, Nabız'ın `.env`'ine `ANALIZ_URL=http://nabiz-analiz:8000` yazar ve Nabız'ı yeniden başlatır. Arıza Defteri `GECMIS_GUN=360` olmalı (varsayılan). Kontrol: `#/analiz`.
+`bash ~/ysfdurak.com/sunucu/kurulum-nabiz-analiz.sh`: dışarı açılmaz, Nabız'ın `.env`'ine `ANALIZ_URL=http://nabiz-analiz:8000` yazar ve Nabız'ı yeniden başlatır. Arıza Defteri `GECMIS_GUN=360` olmalı (varsayılan). Kontrol: `#/bakim` (eski adres `#/analiz` de açılır).
 
 ## Çalışma biçimleri
 

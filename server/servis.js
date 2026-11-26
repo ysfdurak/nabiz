@@ -6,6 +6,8 @@ import { anMs, gecerliGun, gunEkle, gunFarki, isoTr, istanbulGunu } from '../src
 import { DUNYA_SINIFI, oeeRaporu } from '../src/cekirdek/oee.js';
 import { a3Taslagi } from '../src/cekirdek/a3.js';
 import { sabahOzeti } from '../src/cekirdek/sabah-ozeti.js';
+import { bakimTablosu } from '../src/cekirdek/bakim.js';
+import { olgunluk } from '../src/cekirdek/olgunluk.js';
 
 export class KuralHatasi extends Error {
   constructor(mesaj, { durum = 400, kod = 'kural' } = {}) {
@@ -424,15 +426,49 @@ export function servisOlustur({ store, ana, ariza, analiz = { acik: false }, app
       });
     },
 
-    /** Şefin sabah özeti (bildirim metni ve önizleme): geciken etiketler, sorumlusuz kırmızılar, gecikme kimde. */
-    sabahOzeti(kum) {
+    /**
+     * Planlı bakım tablosu (V3): Arıza Defteri takvimi + sayaç + Nabız Analiz önerisi. Analiz kapalıysa öneri sütunu boş.
+     * Paylaşılan veri: dakikada bir.
+     */
+    async bakimDurumu() {
+      disZorunlu(ariza, 'Arıza Defteri');
+      return onbellekli('bakim', 60_000, async () => {
+        const o = await dis(() => ariza.ozet(30));
+        let oneriler = null;
+        if (analiz.acik) { try { oneriler = (await this.guvenilirlik()).tipler; } catch { oneriler = null; } }
+        return { gun: istanbulGunu(simdi()), oneriVar: !!oneriler, ...bakimTablosu(o.ekipmanlar, oneriler, istanbulGunu(simdi())) };
+      });
+    },
+
+    /** Otonom bakım olgunluğu (7 adım), tip başına; son 30 günün kontrol ve etiketlerinden. */
+    olgunluk(kum) {
+      const an = simdi();
+      const bugun = istanbulGunu(an);
+      const kontroller30 = store.kontroller(kum, { bas: anMs(gunEkle(bugun, -29)) });
+      // Kayıt 30 günden kısaysa (yeni kurulum, demo: 7 gün) dönem kaydın başladığı güne kısalır; yoksa uyum yanlış düşük çıkar
+      const ilk = kontroller30.reduce((m, k) => (k.gun < m ? k.gun : m), bugun);
+      const gunSayisi = Math.max(1, Math.min(30, gunFarki(ilk, bugun) + 1));
+      const bas = anMs(gunEkle(bugun, -(gunSayisi - 1)));
+      const a = ana();
+      return {
+        donemGun: gunSayisi,
+        tipler: olgunluk({ kontroller: kontroller30.filter((k) => k.baslangic >= bas), etiketler: store.etiketler(kum, { bas, limit: 5000 }).map(etiketGorunumu),
+          ekipmanlar: a.ekipmanlar, tipler: a.tipler, bugun, simdi: an, gunSayisi }),
+      };
+    },
+
+    /** Şefin sabah özeti (bildirim metni ve önizleme): geciken etiketler, sorumlusuz kırmızılar, gecikme kimde, geciken bakım. */
+    async sabahOzeti(kum) {
       const bugun = istanbulGunu(simdi());
       const acik = store.etiketler(kum, { durum: 'acik', limit: 2000 });
       const gecikenler = acik.filter((e) => geciktiMi(e, bugun)).map(etiketGorunumu);
       const sorumsuzKirmizilar = acik.filter((e) => e.renk === 'kirmizi' && !e.sorumlu).map(etiketGorunumu);
       const sorumluYuku = [...Map.groupBy(gecikenler.filter((e) => e.sorumlu), (e) => e.sorumluAd)].map(([ad, l]) => ({ ad, geciken: l.length }))
         .sort((x, y) => y.geciken - x.geciken);
-      return { gun: bugun, ...sabahOzeti({ gecikenler, sorumsuzKirmizilar, sorumluYuku }, { bugun, uygulamaUrl: appUrl }) };
+      // Takvime göre geciken planlı bakımlar (Arıza Defteri'ne ulaşılamazsa özet yine gider, bakım satırı olmaz)
+      let gecikenBakimlar = [];
+      if (ariza.acik) { try { gecikenBakimlar = (await this.bakimDurumu()).satirlar.filter((x) => x.durum === 'gecikti'); } catch { gecikenBakimlar = []; } }
+      return { gun: bugun, ...sabahOzeti({ gecikenler, sorumsuzKirmizilar, sorumluYuku, gecikenBakimlar }, { bugun, uygulamaUrl: appUrl }) };
     },
 
     /** Yönetici özeti: kontrol uyumu, açık etiketler, kapanma süreleri, en sık sorunlu maddeler. */

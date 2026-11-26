@@ -185,7 +185,9 @@ export function createApp({ config, store, ana, ariza, analiz, log = () => {}, s
     if (path === '/v1/etiket' && yazma) return json(res, 201, servis.etiketAc(kum, await jsonOku(req)));
     if (path === '/v1/etiket' && !yazma) return json(res, 200, servis.etiketler(kum, q));
     if (path === '/v1/ozet' && !yazma) return json(res, 200, servis.ozet(kum, q));
-    if (path === '/v1/sabah-ozeti' && !yazma) return json(res, 200, servis.sabahOzeti(kum));
+    if (path === '/v1/sabah-ozeti' && !yazma) return json(res, 200, await servis.sabahOzeti(kum));
+    if (path === '/v1/bakim' && !yazma) return json(res, 200, await servis.bakimDurumu());
+    if (path === '/v1/olgunluk' && !yazma) return json(res, 200, servis.olgunluk(kum));
     // V2
     if (path === '/v1/durus' && yazma) return json(res, 201, servis.durusKaydet(kum, await jsonOku(req)));
     m = /^\/v1\/durus\/(D-[0-9a-f]{12})(\/bitir)?$/.exec(path);

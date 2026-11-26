@@ -49,7 +49,7 @@ export function a3Taslagi(g) {
     if (b.tur === 'tek_kisi') onlemler.push(`Tek kişiye bağımlılık: ${b.metin} Emanet'te çapraz eğitim planı açılmalı.`);
   }
   if (ekipman[0] && g.kayitlar.length >= 5 && ekipman[0][1] / g.kayitlar.length >= 0.5) {
-    onlemler.push(`Arızaların ${yuzde(ekipman[0][1] / g.kayitlar.length)}'i ${ekipman[0][0]}'te: önce bu ekipmana odaklanılmalı (ekipmana özgü durum: yaş, kullanım, konum).`);
+    onlemler.push(`En çok arıza ${ekipman[0][0]} ekipmanında (tüm arızaların ${yuzde(ekipman[0][1] / g.kayitlar.length)}): önce bu ekipmana odaklanılmalı (ekipmana özgü durum: yaş, kullanım, konum).`);
   }
 
   return {

@@ -230,3 +230,10 @@ details.grup > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 .tur-kisa li { font-size: 0.85rem; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 999px; padding: 2px 10px; }
 .dene { margin: 8px 0 12px; padding: 10px 14px; border: 1px dashed var(--cizgi); border-radius: 10px; }
 .dene ol { margin: 4px 0 0 18px; padding: 0; }
+
+/* V3: bakım satırı ve 7 adım */
+.bakim-satir { margin: 6px 0 12px; }
+.adimlar .adim { border-left: 4px solid var(--cizgi); padding-left: 10px; }
+.adimlar .adim.gecti { border-left-color: var(--yesil); }
+.adimlar .adim.devam { border-left-color: var(--turuncu); }
+.adimlar .adim.bekliyor, .adimlar .adim.olculmuyor { opacity: 0.75; }

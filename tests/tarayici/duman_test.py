@@ -40,6 +40,8 @@ with sync_playwright() as p:
             b.close(); continue
         s.goto(adres + "#/e/RT-03")
         s.wait_for_selector(".kart-baslik h1")
+        s.wait_for_selector(".bakim-satir .rozet")
+        assert "Son bakım" in s.inner_text(".bakim-satir")
         s.screenshot(path=str(cikti / "kart.png"), full_page=True)
         s.goto(adres + "#/kontrol/RT-03")
         s.wait_for_selector(".madde")
@@ -108,9 +110,13 @@ with sync_playwright() as p:
         assert "En büyük kayıp" in s.inner_text(".sonuc"), "Kayıp sayfası tek cümlelik sonuçla açılmalı"
         s.wait_for_selector("svg polyline")
         s.screenshot(path=str(cikti / "kayip.png"), full_page=True)
-        s.goto(adres + "#/analiz")
+        s.goto(adres + "#/bakim")
         s.wait_for_selector("svg.beta")
-        assert "uzatılabilir" in s.inner_text(".sonuc") or "sıklaştırılmalı" in s.inner_text(".sonuc")
+        s.wait_for_selector("h2:has-text('Bakım takvimi')")
+        assert s.locator("nav.sekmeler a[aria-current]").inner_text() == "Bakım"
+        assert "akvime göre" in s.locator(".sonuc").first.inner_text()
+        sonuc = " ".join(s.locator(".sonuc").all_inner_texts())
+        assert "uzatılabilir" in sonuc or "sıklaştırılmalı" in sonuc
         assert s.locator(".tur-kisa li").count() >= 5, "rastgele türler kısa listede"
         s.screenshot(path=str(cikti / "analiz.png"), full_page=True)
         s.locator(".tur-satir a", has_text="RT-MAS").click()
@@ -132,6 +138,10 @@ with sync_playwright() as p:
         assert "geciken" in s.inner_text(".bildirim-onizleme"), "sabah özeti önizlemesi geciken etiketleri göstermeli"
         assert s.locator(".kpi:has-text('Hızlı kontrol')").count() == 1
         s.screenshot(path=str(cikti / "ozet.png"), full_page=True)
+        s.goto(adres + "#/olgunluk")
+        s.wait_for_selector(".adimlar")
+        assert s.locator(".adimlar").count() == 5 and s.locator(".adim").count() == 35
+        s.screenshot(path=str(cikti / "olgunluk.png"), full_page=True)
         s.goto(adres + "#/qr")
         s.wait_for_selector(".qr img")
         for _ in range(50):  # wait_for_function CSP'li sayfada çalışmaz (dizeyi eval eder); evaluate ile yokla

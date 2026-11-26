@@ -147,3 +147,35 @@ test('giden kutusu: duruşun arıza kimliği duruşa yazılır, kapatma onu kull
   assert.equal(s.durusBul('ana', id).ariza_id, 'G-20261124-aaaaaaaa');
   assert.deepEqual(kapatilan, ['G-20261124-aaaaaaaa']);
 });
+
+test('V3 bakım ucu: takvim + sayaç + öneri; analiz yoksa yalnız takvim; Arıza Defteri yoksa 503; sabah özetinde geciken bakım', async () => {
+  const { iste, kapat } = await kur();
+  try {
+    const b = await iste('/v1/bakim');
+    assert.equal(b.durum, 200);
+    assert.equal(b.govde.oneriVar, true);
+    assert.equal(b.govde.satirlar.length, 18);
+    const sira = { gecikti: 0, oneriye_gore: 1, yaklasiyor: 2, normal: 3 };
+    for (let i = 1; i < b.govde.satirlar.length; i++) assert.ok(sira[b.govde.satirlar[i - 1].durum] <= sira[b.govde.satirlar[i].durum], 'durum sırası');
+    const fl = b.govde.satirlar.find((x) => x.tip === 'forklift');
+    assert.ok(fl.bakimdanBeriSaat != null && fl.periyotSaat > 300, 'sayaç Arıza Defteri\'nden (surum 4)');
+    assert.ok(fl.onerilenGun > 0 && fl.onerilenGun < 30, 'forklift için kısalt önerisi');
+    const so = await iste('/v1/sabah-ozeti');
+    const gec = b.govde.satirlar.filter((x) => x.durum === 'gecikti');
+    if (gec.length) assert.ok(so.govde.metin.includes(`${gec.length} planlı bakım gecikti`));
+    const ol = await iste('/v1/olgunluk');
+    assert.equal(ol.govde.tipler.length, 5);
+  } finally { await kapat(); }
+  const yok = await kur({ analizAcik: false });
+  try {
+    const b = await yok.iste('/v1/bakim');
+    assert.equal(b.durum, 200);
+    assert.equal(b.govde.oneriVar, false);
+    assert.ok(b.govde.satirlar.every((x) => x.onerilenGun == null && x.durum !== 'oneriye_gore'));
+  } finally { await yok.kapat(); }
+  const kapali = await kur({ arizaAcik: false });
+  try {
+    assert.equal((await kapali.iste('/v1/bakim')).durum, 503);
+    assert.equal((await kapali.iste('/v1/sabah-ozeti')).durum, 200, 'sabah özeti Arıza Defteri olmadan da çıkar');
+  } finally { await kapali.kapat(); }
+});
