@@ -17,6 +17,15 @@ const tr = (x, b = 1) => (x == null ? '—' : Number(x).toLocaleString('tr-TR', 
  * @param {object[]} g.bulgular        Arıza Defteri bulguları
  * @param {number} g.donemGun
  */
+/** Bakım aralığı önerisi yönüne göre: kısalt / uygun / uzatılabilir. Model yalnız arıza duruşunu görür; uzatma önerisinde
+ * emniyet muayenesi ve üretici talimatı ayrıca bakılmalı (surum 6: gerçek sıklıkta öneriler çoğunlukla uzatma yönünde). */
+export function aralikCumlesi(tipAd, a) {
+  const m = a.mevcut_gun, o = Math.round(a.onerilen_gun);
+  if (o < m * 0.9) return `${tipAd} bakım aralığının kısaltılması değerlendirilmeli (${m} → ${o} gün).`;
+  if (o > m * 1.1) return `${tipAd} için mevcut ${m} günlük bakım aralığı bu arıza için yeterli; maliyet modeli ${a.sinirda ? 'uzatmayı' : `${o} güne uzatmayı`} gösteriyor, ama emniyet muayenesi ve üretici talimatı ayrıca bakılmalı.`;
+  return `${tipAd} için mevcut ${m} günlük bakım aralığı uygun.`;
+}
+
 export function a3Taslagi(g) {
   const kapali = g.kayitlar.filter((k) => k.sure_dk != null);
   const durus = kapali.reduce((t, k) => t + k.sure_dk, 0);
@@ -35,7 +44,7 @@ export function a3Taslagi(g) {
 
   const onlemler = [];
   if (gv?.sinif === 'asinma') {
-    onlemler.push(`Aşınma (β ${tr(gv.beta, 2)}, %90 aralık ${tr(gv.beta_alt, 2)}–${tr(gv.beta_ust, 2)}): planlı bakım bu arızayı önler.${g.aralik ? ` ${g.turBilgi.tipAd ?? g.turBilgi.tip} bakım aralığı ${g.aralik.mevcut_gun} → ${Math.round(g.aralik.onerilen_gun)} gün önerisi değerlendirilmeli.` : ''}`);
+    onlemler.push(`Aşınma (β ${tr(gv.beta, 2)}, %90 aralık ${tr(gv.beta_alt, 2)}–${tr(gv.beta_ust, 2)}): planlı bakım bu arızayı önler.${g.aralik ? ` ${aralikCumlesi(g.turBilgi.tipAd ?? g.turBilgi.tip, g.aralik)}` : ''}`);
     onlemler.push('Bakım talimatına bu arızanın parçası için ölçülebilir kontrol (aşınma payı, sızdırmazlık) eklenmeli.');
   } else if (gv?.sinif === 'rastgele') {
     onlemler.push(`Rastgele (β ${tr(gv.beta, 2)}): planlı bakımı sıklaştırmak azaltmaz. Vardiya başı kontrol listesine erken belirti maddesi eklenmeli, kök neden 5 Neden ile aranmalı.`);
