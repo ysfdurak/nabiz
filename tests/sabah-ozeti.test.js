@@ -18,7 +18,12 @@ test('sabah özeti: sorun yoksa gönderilmez; varsa en eski gecikme üstte, en �
   const o = sabahOzeti({ gecikenler, sorumsuzKirmizilar: [et('KV-01', '2026-11-27')], sorumluYuku: [{ ad: 'Murat Kaya', geciken: 5 }] },
     { bugun: '2026-11-25', uygulamaUrl: 'https://nabiz.ornek.test/' });
   assert.equal(o.gonderilecek, true);
-  assert.equal(o.baslik, '25.11 sabah özeti: 6 geciken');
+  assert.equal(o.baslik, '25.11 sabah özeti: 6 geciken etiket');
+  // V3: geciken planlı bakım da özete girer; yalnız bakım gecikmişse de gönderilir
+  const b = sabahOzeti({ gecikenler: [], sorumsuzKirmizilar: [], sorumluYuku: [], gecikenBakimlar: [{ kod: 'RT-02', gecikmeGun: 4 }] }, { bugun: '2026-11-25' });
+  assert.equal(b.gonderilecek, true);
+  assert.equal(b.baslik, '25.11 sabah özeti: 1 geciken bakım');
+  assert.ok(b.metin.includes('1 planlı bakım gecikti: RT-02 (4 gün)'));
   const satir = o.metin.split('\n');
   assert.match(satir[1], /^• FL-03 .* sorumlu yok · 6 gün$/, 'en eski gecikme ilk');
   assert.ok(o.metin.includes('… ve 1 etiket daha'));

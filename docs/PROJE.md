@@ -14,7 +14,7 @@ Son güncelleme: 25 Kasım 2026 (V2.1: Pusula bağlantısı çıkarıldı, takip
 | **Kimin için** | Operatör (kontrol, etiket), teknisyen (kırmızı etiketi kapatır), vardiya şefi ve yönetici (özet) |
 | **Canlı adres** | https://nabiz.ysfdurak.com **[doğrulanacak: henüz kurulmadı]** |
 | **Depo** | https://github.com/ysfdurak/nabiz |
-| **Durum** | V2 bitti: duruş kaydı, OEE ve 6 büyük kayıp, Pareto → A3 taslağı, güvenilirlik ve bakım aralığı (Python servisi [Nabız Analiz](https://github.com/ysfdurak/nabiz-analiz)). Sırada V3: planlı bakım takvimi, TPM adım panosu. |
+| **Durum** | V3 bitti (26.11.2026): planlı bakım takvimi ve sayaç (Bakım ekranı), geciken bakım uyarısı (liste, kart, sabah özeti, MCP), otonom bakımın 7 adımı. V2: duruş kaydı, OEE ve 6 büyük kayıp, Pareto → A3, güvenilirlik (Python servisi [Nabız Analiz](https://github.com/ysfdurak/nabiz-analiz)). |
 
 ## 2. Sorun ve verdiğim kararlar
 
@@ -89,7 +89,7 @@ flowchart LR
   AD -->|360 gün kayıt| NA[Nabız Analiz · Python]
   NA -->|/v1/guvenilirlik| N
   N --> K[Kayıp: OEE, 6 büyük kayıp, Pareto]
-  N --> G[Analiz: β, sınıf, bakım aralığı]
+  N --> G[Bakım: takvim, sayaç, β, bakım aralığı]
   N --> A3[A3 taslağı]
   T[Telefon: duruş kaydı] --> N -->|giden kutusu| AD
 ```
@@ -97,7 +97,7 @@ flowchart LR
 - **OEE** Nabız'ın çekirdeğinde hesaplanır (`src/cekirdek/oee.js`). Arıza Defteri ham vardiya verisini verir, TPM yorumu Nabız'dadır. Toplarken oranların ortalaması alınmaz: süreler ve adetler toplanır, oran sonra hesaplanır. Sentetik depoda OEE yaklaşık %75'tir: kullanılabilirlik %97, performans %78, kalite %99,6. Kaybın asıl kaynağı hız (bekleme, yol, arama).
 - **Duruş kaydı:** Arıza dışındaki kayıplar (ayar, küçük duruş, hız, kalite) da telefondan girilir. Süre verilirse kapalı kaydedilir, "devam ediyor" seçilirse sonra karttan bitirilir. Arıza Defteri'ne giden kutusuyla gider ve Usta, Emanet, Analiz aynı veriyi görür. Uçtan uca denendi: Arıza Defteri'nde gerçek ve kapalı kayıt oluştu.
 - **A3 taslağı** (`src/cekirdek/a3.js`): Pareto'daki bir türe dokununca açılır. 7 bölüm: konu, arka plan, mevcut durum, analiz, hedef, karşı önlemler, takip. Karşı önlemler kural tabanlıdır: aşınma ise bakım aralığı önerisi, rastgele ise kontrol listesi ve 5 Neden, erken dönem ise bakım sonrası kontrol; tekrarlayan gün ve tek kişi bulguları da eklenir. Kök neden ve sorumlular boş bırakılır, onları ekip doldurur.
-- **Güvenilirlik** Nabız Analiz'den gelir (10 dakika önbellek). Servis yoksa "Analiz" ekranı 503 verir, A3 yine açılır ve o bölümde "alınamadı" yazar.
+- **Güvenilirlik** Nabız Analiz'den gelir (10 dakika önbellek). Servis yoksa Bakım ekranında yalnız takvim görünür (öneri sütunu boş), A3 yine açılır ve o bölümde "alınamadı" yazar.
 
 ## 4. Teknoloji seçimleri
 
@@ -140,7 +140,7 @@ Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 
 ## 7. Testler
 
-`npm test`: 27 test. Tarayıcı duman testi telefon boyutunda, açık ve koyu temada çalışır.
+`npm test`: 30 test. Tarayıcı duman testi telefon boyutunda, açık ve koyu temada çalışır.
 
 | Dosya | Neyi kanıtlıyor |
 | --- | --- |
@@ -189,6 +189,39 @@ V2 ve V2.1'de 6 ekran eklendi (Kayıp, Analiz, A3, sorumlu atama, Geciken, sabah
 
 **Karar bekleyen (gerçekçilik):** Arıza Defteri'nin sentetik verisinde forklift başına yılda yaklaşık 230 arıza var (ortalama arızalar arası süre 31 saat). Bunun 96'sı "akü şarjı bitti". Sahada bir forkliftin bakım ekibi gerektiren arızası ayda birkaç tanedir; akü bitmesi ise arıza değil, operasyon olayıdır (küçük duruş). Seçenekler: yoğunluğu düşürmek ve operatör kaynaklı olayları "küçük duruş" diye ayırmak (analiz için veri azalır, kör deneme yeniden yapılır) ya da olduğu gibi bırakıp dokümanda belirtmek.
 
+## 7c. V3: planlı bakım, sayaç ve 7 adım (26.11.2026)
+
+**Soru:** Kapsam dokümanındaki V3 "planlı bakım ve olgunluk": geciken bakımı görmek, bakımı takvime mi sayaca mı bağlamak gerektiğini bilmek ve otonom bakımın nerede olduğunu kanıtla söylemek.
+
+```mermaid
+flowchart LR
+  AD[Arıza Defteri surum 4<br>kullanım + sayaç] -->|/v1/ozet: bakım durumu| N[Nabız]
+  NA[Nabız Analiz<br>aralık + takvim/sayaç] -->|/v1/guvenilirlik| N
+  N --> B[Bakım ekranı<br>gecikti · öneriyi aştı · yaklaşıyor]
+  N --> L[Ekipman listesi ve kart<br>bakım rozeti]
+  N --> S[Sabah özeti<br>geciken bakım]
+  N --> M[MCP bakim_durumu]
+  K[Kontrol + etiket kaydı] --> O[7 adım]
+```
+
+- **Üç ayrı durum, üç ayrı soru** (`src/cekirdek/bakim.js`):
+  - *Takvime göre gecikti:* şirketin kendi kuralına göre geç. Sabah özetine yalnız bu girer.
+  - *Önerilen aralığı aştı:* takvim gelmedi ama veri daha sık bakım diyor. Bu bir gecikme değil, karar konusu; ekranda öyle yazılıyor.
+  - *Yaklaşıyor:* 3 gün içinde.
+  - **Bu yapı uygun değil, şöyle uygulanır:** İlk akla gelen "analizin önerisine göre geciken her şey gecikti" demekti. O zaman 18 ekipmanın 6'sı her gün kırmızı görünür, kural değişmediği için kimse bir şey yapamaz, uyarı körlüğü olur. Kural (takvim) ile öneri (veri) ayrı gösterilir.
+- **Sayaç:** Arıza Defteri artık ekipmanın her vardiyada ne kadar kullanıldığını üretiyor (surum 4) ve aşınma çalışılan süreyle ilerliyor. Kartta "Son bakım 29.10 · 28 gün / 524 çalışma saati": takvim periyodunun ortalaması 447 saat, yoğun sezonda aynı 30 gün daha çok saat ediyor.
+- **Takvim mi, sayaç mı? Bu depoda takvim yeterli.** Nabız Analiz iki politikayı karşılaştırdı: kullanım yalnız ±%20 oynadığı için sayacın kazancı %2'den az. Asıl kazanç aralığı kısaltmak (forklift 30 → 12 gün). Bakım ekranı bunu tip başına tek cümleyle söylüyor. Ayrıntı: Nabız Analiz dokümanı 4.1.
+- **7 adım** (`src/cekirdek/olgunluk.js`): adım beyanla değil kayıtla geçilir, bir adım geçilmeden sonrakine bakılmaz.
+  1. Kontrol uyumu ≥ %85.
+  2. Beyaz etiketlerin ≥ %80'i hedefinde kapanıyor, geciken beyaz yok.
+  3. Hızlı kontrol ≤ %5, geciken emniyet etiketi yok.
+  4. Kırmızı etiketlerin ≥ %60'ı vardiya kontrolünde bulunmuş (sorun bozulmadan yakalanıyor).
+  5-7. "Ölçülmüyor", denetimle değerlendirilir; uydurma bir yüzde gösterilmez.
+  - Kayıt 30 günden kısaysa (demo: 7 gün) dönem kısalır, yoksa uyum yanlış düşük çıkar. **Bunu ekranı açınca gördüm:** ilk sürüm demoda %22 uyum gösteriyordu.
+  - Asgari veri: 10 kontrol, 5 kapanmış beyaz, 5 kırmızı; azsa "veri az".
+- **Örnek veri gerçekçileşti:** Örnek kırmızı etiketler artık onları bulan kontrole bağlı. Kontrol dışında, çalışırken fark edilen kırmızı etiketler de var: forkliftte az (otonom bakım oturdu), diğerlerinde daha çok. Bu yüzden demoda forklift 3. adımda, diğerleri 1. adımda.
+- **Türkçe ek:** "%76'i" yanlış ("%76'sı" olmalı; ek, sayının okunuşuna bağlı). Yüzdenin arkasına ek gelen bütün cümleler eksiz yazıldı ("Vardiya kontrolünde bulunan kırmızı etiket: %76").
+
 ## 8. Bilinen sınırlar ve sonraki adımlar
 
 - **iPhone'da denenmedi (26.11.2026).** Android'de QR, kontrol, etiket ve fotoğraf geçti. iPhone'da birine `#/e/FL-01` QR'ını okutup fotoğraflı bir kırmızı etiket açtırmak 2 dakika sürer; yapılana kadar "iOS desteklenir" denmemeli.
@@ -199,7 +232,7 @@ V2 ve V2.1'de 6 ekran eklendi (Kayıp, Analiz, A3, sorumlu atama, Geciken, sabah
 - Çevrimdışı çalışma yok: depoda kapsama zayıfsa kontrol gönderilemez.
 - OEE'nin performans kısmı sentetik (ideal hızın %68–88'i). Gerçek depoda WMS hareket kayıtlarından gelmeli.
 - A3 taslağı dışa yalnız metin ve yazdırma ile çıkıyor. Yalın Araçlar yazılınca oraya aktarılacak.
-- Sırada V3: planlı bakım takvimi (Analiz'in önerdiği aralıklarla), TPM 7 adım panosu, kişiye özel giriş.
+- Sırada: kişiye özel giriş (bildirim kişi başına olsun), beyaz etiketlerin İvme'ye (kaizen) gitmesi, 7 adımda 5-7'nin ölçülmesi (denetim kaydı).
 
 ## 9. Mülakat soruları
 
@@ -218,6 +251,8 @@ V2 ve V2.1'de 6 ekran eklendi (Kayıp, Analiz, A3, sorumlu atama, Geciken, sabah
 13. **A3 neden kural tabanlı?** Her öneri veriden ve kuraldan çıkıyor ve nedeni gösterilebiliyor. Yapay zekâ önerisi denetlenemezdi. Kök nedeni ekip bulur, araç ekibi doğru yere yönlendirir.
 14. **Etiketin hedef tarihi neden kuralla geliyor?** Operatörden her seferinde tarih istemek formu uzatır ve çoğu boş geçer. Kural (duran ekipman 1, kırmızı 3, beyaz 7 gün) makul bir varsayılan verir; şef gerekirse değiştirir. Hedef günü içinde kapanan gecikmiş sayılmaz.
 15. **Sabah özeti neden sorun yokken gitmiyor?** Her sabah "sorun yok" gelen bildirim kısa sürede okunmaz olur; asıl sorun olduğunda da bakılmaz. Bildirim yalnız müdahale gerektiğinde gider. Durumu merak eden Özet ekranındaki önizlemeye bakar.
+16. **Bakımı sayaca bağlamayı neden önermedin?** Hesapladım: bu depoda kullanım ±%20 oynuyor, sayacın kazancı %2'den az. Asıl kazanç aralığı kısaltmak. Sayaç, kullanımı çok oynayan ekipmanda (yedek, sezonluk) değer; ekranda sayaç yine görünüyor çünkü planlamacı için bilgi.
+17. **7 adımı neden yüzdeyle değil adımla gösterdin?** TPM'de adım sıralıdır; 2. adımı geçmeden 4. adımın yüzdesi anlamsız. Her adımın ölçütü kayıttan, beyandan değil. 5-7'yi ölçemediğimi açıkça yazdım.
 
 ## 10. Kendini test et
 
@@ -253,6 +288,7 @@ Cevaplar (önce kendin dene): Hayır, benzetim olarak saklanır · Hayır, 403; 
 | Tarih | Değişiklik |
 | --- | --- |
 | 25.11.2026 | Ortak ölçüm ve geri bildirim (olcum.ysfdurak.com), yalnız nabiz.ysfdurak.com'da. Ekran = adresin ilk parçası (`#/e/F-03` → `e`), işlem = POST yolunun sabit parçaları (`/v1/etiket/12/kapat` → `islem:etiket_kapat`); kimlik, ekipman kodu, not ve fotoğraf gitmez. Kurum kurulumunda betik yüklenmez. Ders: ölçüme ham adres verilseydi her ekipman ayrı bir "ekran" sayılırdı; yönetim sayfası okunmaz hâle gelirdi. |
+| 26.11.2026 | V3 (bölüm 7c): Bakım sekmesi (eski Analiz; `#/analiz` adresi korunur): takvim, sayaç, gecikti / önerilen aralığı aştı / yaklaşıyor; ekipman listesi ve kartta bakım rozeti; sabah özetinde geciken bakım; MCP `bakim_durumu` ve `otonom_bakim_olgunlugu`; 7 adım sayfası (`#/olgunluk`). Örnek etiketler kontrole bağlı, kontrol dışı kırmızılar eklendi. Yüzde arkasındaki Türkçe ekler kaldırıldı. 30 test. |
 | 26.11.2026 | Kullanıcı gözüyle inceleme (bölüm 7b): "Hepsini tamam" kaldırıldı, hızlı kontrol göstergesi; emniyet maddeleri (kırmızı, ekipman duruyor, hedef aynı gün); Etiket filtreleri iki adlı satır; Analiz ve Kayıp tek cümlelik sonuçla açılıyor, Analiz %42 kısaldı; sabah özeti önizlemesi açılır bölümde; demoda "5 dakikada dene". 27 test. |
 | 25.11.2026 | V2.1: Pusula bağlantısı çıkarıldı (çift kayıt). Etikete sorumlu ve hedef tarih: varsayılan hedef kuralı, atama (teknisyen/şef), geciken ve "bana atanan" filtreleri, Özet'te geciken, sorumlusuz kırmızı ve sorumlu başına iş, ekipman listesinde gecikme rozeti; MCP'de `sorumlu` ve `geciken` filtreleri. Örnek veride atama. Kurulum artık soru sormuyor. CI duman testi üç servisle. Aynı gün: şefin sabah özeti (ntfy, 07:30, sorun yoksa gitmez, Özet'te önizleme; kurulum konu üretir). 26 test. |
 | 24.11.2026 | V2: duruş kaydı (süreli ya da devam eden, giden kutusuyla Arıza Defteri'ne), OEE çekirdeği ve Kayıp ekranı (KPI, kayıp şelalesi, günlük OEE çizgisi, 6 büyük kayıp, Pareto, ekipman OEE), Analiz ekranı (Nabız Analiz'den β ve bakım aralığı), Pareto → A3 taslağı (yazdır, metni kopyala), 3 yeni MCP aracı, 6 test + tarayıcı testine V2 adımları, sayfaya meta CSP. Sekmeler: Ekipman · Etiket · Kayıp · Analiz · Özet (QR, Özet'e taşındı). |

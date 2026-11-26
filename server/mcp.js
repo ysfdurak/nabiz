@@ -9,12 +9,13 @@ import { z } from 'zod';
 import { KuralHatasi } from './servis.js';
 
 const OKUMA = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
-export const MCP_ARAC_ADLARI = ['ekipman_durumu', 'etiketleri_listele', 'etiket_detayi', 'ekipman_karti', 'tpm_ozeti', 'oee_ve_kayiplar', 'guvenilirlik', 'a3_taslagi'];
+export const MCP_ARAC_ADLARI = ['ekipman_durumu', 'etiketleri_listele', 'etiket_detayi', 'ekipman_karti', 'tpm_ozeti', 'oee_ve_kayiplar', 'guvenilirlik', 'a3_taslagi', 'bakim_durumu', 'otonom_bakim_olgunlugu'];
 
 const TALIMAT = `Nabız, Yıldız Ev & Yaşam deposunun TPM (Toplam Verimli Bakım) uygulamasıdır.
 Operatörler vardiya başında ekipmanı kontrol eder (otonom bakım), sorunu etiketler: kırmızı = bakım ekibi gerekir, beyaz = operatör kendisi giderir.
 Her etiketin sorumlusu ve hedef tarihi vardır; hedefi geçmiş açık etiket "gecikti" sayılır. "Ekipman çalışamıyor" işaretliyse Arıza Defteri'ne arıza düşer.
 V2: OEE ve 6 büyük kayıp (oee_ve_kayiplar), güvenilirlik ve bakım aralığı (guvenilirlik), A3 taslağı (a3_taslagi). "Neden sık arıza" sorusunda önce guvenilirlik ve oee_ve_kayiplar'a bak.
+V3: planlı bakım takvimi ve sayaç (bakim_durumu: "geciken bakımlar" sorusunun cevabı), otonom bakımın 7 adımı (otonom_bakim_olgunlugu).
 Araçlar salt okumadır. Kontrol ve etiket kaydını sahadaki kişi telefondan yapar.`;
 
 export function createMcpHandler({ servis, log = () => {} }) {
@@ -50,6 +51,14 @@ export function createMcpHandler({ servis, log = () => {} }) {
     ['a3_taslagi', 'Bir arıza türü için A3 problem çözme taslağı: arka plan, mevcut durum, analiz (güvenilirlik ve bulgular), hedef, kural tabanlı karşı önlemler.', {
       tur: z.string().max(10).describe('Arıza türü kodu, ör. RT-HID.'),
     }, (a) => servis.a3(a.tur)],
+    ['bakim_durumu', 'Planlı bakım tablosu: ekipman başına son bakım, takvimdeki sıradaki bakım, bakımdan beri gün ve çalışma saati (sayaç), Nabız Analiz önerisi ve durum: gecikti (takvime göre), oneriye_gore (önerilen aralık aşıldı), yaklasiyor (3 gün içinde), normal. "Geciken bakımları listele" için durum=gecikti.', {
+      durum: z.enum(['gecikti', 'oneriye_gore', 'yaklasiyor', 'normal']).optional(),
+      tip: z.enum(['forklift', 'reach_truck', 'konveyor', 'sorter', 'strec']).optional(),
+    }, async (a) => {
+      const r = await servis.bakimDurumu();
+      return { ...r, satirlar: r.satirlar.filter((x) => (!a.durum || x.durum === a.durum) && (!a.tip || x.tip === a.tip)) };
+    }],
+    ['otonom_bakim_olgunlugu', 'Otonom bakımın 7 adımı, ekipman tipi başına: hangi adımda olduğu ve her adımın kanıtı (son 30 günün kontrol ve etiketlerinden). 5-7. adımlar ölçülmüyor.', {}, () => servis.olgunluk(KUM)],
   ];
 
   function buildServer() {

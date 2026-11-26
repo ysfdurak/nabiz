@@ -9,9 +9,9 @@ Her etiketin bir **sorumlusu** ve **hedef tarihi** vardır. Tarih verilmezse kur
 
 Ticari olmayan bir portföy projesidir. Arayüz Türkçedir. Demo veri sentetiktir: kurgusal Yıldız Ev & Yaşam deposu.
 
-| Ekipman | Kontrol | Etiket | Kayıp ve OEE | Analiz | A3 |
+| Ekipman | Kontrol | Etiket | Kayıp ve OEE | Bakım | A3 |
 |---|---|---|---|---|---|
-| ![Ekipman](docs/ekranlar/ekipman.png) | ![Kontrol](docs/ekranlar/kontrol.png) | ![Etiket](docs/ekranlar/etiket.png) | ![Kayıp](docs/ekranlar/kayip.png) | ![Analiz](docs/ekranlar/analiz.png) | ![A3](docs/ekranlar/a3.png) |
+| ![Ekipman](docs/ekranlar/ekipman.png) | ![Kontrol](docs/ekranlar/kontrol.png) | ![Etiket](docs/ekranlar/etiket.png) | ![Kayıp](docs/ekranlar/kayip.png) | ![Bakım](docs/ekranlar/analiz.png) | ![A3](docs/ekranlar/a3.png) |
 
 ## Ne yapar
 
@@ -24,7 +24,8 @@ Ticari olmayan bir portföy projesidir. Arayüz Türkçedir. Demo veri sentetikt
 - **Demo:** Her ziyaretçi kendi deneme alanında çalışır. Alan örnek 7 günlük geçmişle açılır ve 72 saat sonra silinir. Gönderimler gerçek sisteme gitmez, "gidecek içerik" olarak gösterilir.
 - **Duruş kaydı (V2):** Arıza dışındaki kayıplar da (ayar, küçük duruş, hız, kalite) telefondan girilir ve Arıza Defteri'ne gider.
 - **Kayıp ve OEE (V2):** Depo, tip, ekipman ve gün bazında OEE (kullanılabilirlik × performans × kalite), kayıp şelalesi, 6 büyük kayıp, Pareto.
-- **Analiz (V2):** [Nabız Analiz](https://github.com/ysfdurak/nabiz-analiz) (Python) her arıza türünün aşınma, rastgele ya da erken dönem davranışını ve tip başına önerilen bakım aralığını verir.
+- **Bakım (V3):** Planlı bakım takvimi ve sayaç (bakımdan beri çalışma saati); takvime göre geciken, 3 gün içinde gelen ve analizin önerdiği aralığı aşan ekipmanlar. Geciken bakım ekipman listesinde, ekipman kartında ve şefin sabah özetinde görünür. [Nabız Analiz](https://github.com/ysfdurak/nabiz-analiz) (Python) her arıza türünün aşınma, rastgele ya da erken dönem davranışını, tip başına önerilen bakım aralığını ve takvim-sayaç karşılaştırmasını verir.
+- **Otonom bakımın 7 adımı (V3):** Her ekipman tipi için hangi adımda olunduğu; adım beyanla değil son 30 günün kontrol ve etiket kaydıyla geçilir. 5-7. adımlar ölçülmüyor (dürüstçe yazılıyor).
 - **A3 taslağı (V2):** Pareto'daki bir türden tek dokunuşla problem çözme sayfası açılır. Karşı önlemler kural tabanlıdır, kök nedeni ekip yazar.
 - **MCP:** Claude kurum alanını salt okuma araçlarıyla sorgular ("bu vardiya hangi ekipmanın kontrolü eksik?", "en çok duruş yaratan arıza neden sık?").
 

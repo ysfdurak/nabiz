@@ -64,6 +64,7 @@ export function ornekGecmis(ana, simdi, gunSayisi = 7) {
         const sure = ra.sayi() < 0.08 ? ra.tam(12, 25) : normal;
         const k = { ekipman: e.kod, kisi: kisi.kod, gun, vardiya: v, baslangic: bas, bitis: bas + sure * 1000, sonuc };
         kontroller.push(k);
+        const kontrolSira = kontroller.length - 1;
         for (const s of sonuc.filter((x) => x.durum === 'nok')) {
           const m = liste.find((x) => x.kod === s.madde);
           const acilis = k.bitis + 60_000;
@@ -77,10 +78,26 @@ export function ornekGecmis(ana, simdi, gunSayisi = 7) {
           const sorumlu = m.renk === 'beyaz' ? kisi.kod : e.tip === 'sorter' ? 'K-MKAYA' : ra.sayi() < 0.8 ? ra.sec(teknisyen).kod : null;
           etiketler.push({
             ekipman: e.kod, renk: m.renk, madde: m.kod, tur: m.tur, aciklama: r.sec(ACIKLAMALAR[m.kod] || ['Kontrolde sorun görüldü']),
-            kisi: kisi.kod, olusturma: acilis, durus, sorumlu, hedef: varsayilanHedef(m.renk, durus, istanbulGunu(acilis), m.emniyet === true),
+            kisi: kisi.kod, olusturma: acilis, durus, sorumlu, hedef: varsayilanHedef(m.renk, durus, istanbulGunu(acilis), m.emniyet === true), kontrolSira,
             durum: kapali ? 'kapali' : 'acik', kapatan: kapali ? kapatan.kod : null, kapanis: kapali ? kapanis : null,
             kapatmaNotu: kapali ? (m.renk === 'beyaz' ? 'Temizlendi / düzeltildi' : 'Parça değiştirildi, test edildi') : null,
           });
+        }
+        // Kontrol dışında, çalışırken fark edilen kırmızı etiket (bozulma ya da operatörün sonradan gördüğü sorun).
+        // Forkliftlerde otonom bakım oturduğu için sorunların çoğu kontrolde yakalanır (7 adım: 4. adım); diğerlerinde değil.
+        if (ra.sayi() < (e.tip === 'forklift' ? 0.02 : 0.09)) {
+          const m = ra.sec(liste.filter((x) => x.renk === 'kirmizi'));
+          const acilis = bas + ra.tam(60, 400) * 60_000;
+          if (acilis <= simdi) {
+            const kapali = ra.sayi() < 0.85 && acilis + 4 * 3600e3 <= simdi;
+            etiketler.push({
+              ekipman: e.kod, renk: 'kirmizi', madde: null, tur: m.tur, aciklama: `Çalışırken fark edildi: ${ra.sec(ACIKLAMALAR[m.kod] || ['anormal ses'])}`.slice(0, 300),
+              kisi: kisi.kod, olusturma: acilis, durus: ra.sayi() < 0.3, sorumlu: e.tip === 'sorter' ? 'K-MKAYA' : ra.sec(teknisyen).kod,
+              hedef: varsayilanHedef('kirmizi', false, istanbulGunu(acilis)),
+              durum: kapali ? 'kapali' : 'acik', kapatan: kapali ? (e.tip === 'sorter' ? 'K-MKAYA' : ra.sec(teknisyen).kod) : null, kapanis: kapali ? acilis + ra.tam(60, 600) * 60_000 : null,
+              kapatmaNotu: kapali ? 'Onarıldı, test edildi' : null,
+            });
+          }
         }
       }
     }

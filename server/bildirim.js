@@ -20,7 +20,7 @@ export function sabahZamanlayici({ servis, store, url, saat, log = () => {}, fet
       const gun = istanbulGunu(simdi);
       if (simdi < anMs(gun, ss, dd) || store.metaOku('sabah_ozeti_gun') === gun) return null;
       store.metaYaz('sabah_ozeti_gun', gun); // önce işaretle: gönderim hata verse de gün içinde tekrar denenmez (gürültü olmasın)
-      const o = servis.sabahOzeti('ana');
+      const o = await servis.sabahOzeti('ana');
       if (!o.gonderilecek) {
         log(`Sabah özeti: ${o.metin}`);
         return o;

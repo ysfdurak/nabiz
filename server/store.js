@@ -108,8 +108,9 @@ export function openStore(dosya) {
         db.prepare('DELETE FROM kontrol WHERE kum = ?').run(kum);
         db.prepare('DELETE FROM etiket WHERE kum = ?').run(kum);
         db.prepare('DELETE FROM durus WHERE kum = ?').run(kum);
-        for (const k of kontroller) kontrolEkle(kum, k);
-        for (const e of etiketler) etiketEkle(kum, e);
+        const kimlikler = kontroller.map((k) => kontrolEkle(kum, k));
+        // Örnek etiket, kontrolün dizideki sırasını taşır (kontrolSira); kimlik ancak eklenince belli olur
+        for (const { kontrolSira, ...e } of etiketler) etiketEkle(kum, { ...e, kontrol: kontrolSira != null ? kimlikler[kontrolSira] : e.kontrol ?? null });
         return { kontrol: kontroller.length, etiket: etiketler.length };
       });
     },

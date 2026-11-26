@@ -12,11 +12,12 @@ const gunAy = (g) => `${g.slice(8, 10)}.${g.slice(5, 7)}`;
  * @param {{ bugun: string, uygulamaUrl?: string }} o
  * @returns {{ gonderilecek: boolean, baslik: string, metin: string, oncelik: 'high'|'default', baglanti: string|null }}
  */
-export function sabahOzeti({ gecikenler, sorumsuzKirmizilar, sorumluYuku }, { bugun, uygulamaUrl = null }) {
+export function sabahOzeti({ gecikenler, sorumsuzKirmizilar, sorumluYuku, gecikenBakimlar = [] }, { bugun, uygulamaUrl = null }) {
   const n = gecikenler.length;
   const s = sorumsuzKirmizilar.length;
   const baglanti = uygulamaUrl ? `${uygulamaUrl.replace(/\/$/, '')}/#/etiketler?durum=acik&ek=geciken` : null;
-  if (!n && !s) {
+  const b = gecikenBakimlar.length;
+  if (!n && !s && !b) {
     return { gonderilecek: false, baslik: `${gunAy(bugun)} sabah özeti`, metin: 'Geciken etiket ve sorumlusuz kırmızı yok.', oncelik: 'default', baglanti };
   }
   const satirlar = [];
@@ -32,6 +33,10 @@ export function sabahOzeti({ gecikenler, sorumsuzKirmizilar, sorumluYuku }, { bu
     if (satirlar.length) satirlar.push('');
     satirlar.push(`${s} kırmızı etiketin sorumlusu yok: ${sorumsuzKirmizilar.slice(0, 5).map((e) => e.ekipman).join(', ')}${s > 5 ? ' …' : ''}`);
   }
+  if (b) {
+    if (satirlar.length) satirlar.push('');
+    satirlar.push(`${b} planlı bakım gecikti: ${gecikenBakimlar.slice(0, 5).map((x) => `${x.kod} (${x.gecikmeGun} gün)`).join(', ')}${b > 5 ? ' …' : ''}`);
+  }
   const yuk = sorumluYuku.filter((x) => x.geciken).slice(0, 3);
   if (yuk.length) {
     satirlar.push('');
@@ -39,5 +44,6 @@ export function sabahOzeti({ gecikenler, sorumsuzKirmizilar, sorumluYuku }, { bu
   }
   // Ekipmanı duran ve gecikmiş bir etiket varsa acil
   const acil = gecikenler.some((e) => e.durus);
-  return { gonderilecek: true, baslik: `${gunAy(bugun)} sabah özeti: ${n} geciken`, metin: satirlar.join('\n'), oncelik: acil ? 'high' : 'default', baglanti };
+  const baslik = `${gunAy(bugun)} sabah özeti: ${[n ? `${n} geciken etiket` : '', b ? `${b} geciken bakım` : '', !n && !b && s ? `${s} sorumlusuz kırmızı` : ''].filter(Boolean).join(', ')}`;
+  return { gonderilecek: true, baslik, metin: satirlar.join('\n'), oncelik: acil ? 'high' : 'default', baglanti };
 }
