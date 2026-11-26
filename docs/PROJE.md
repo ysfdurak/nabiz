@@ -161,11 +161,16 @@ Ayrıntı: [docs/SUNUCU_KURULUMU.md](SUNUCU_KURULUMU.md).
 | Teknisyen kapatır | Arıza kapalı, çözen Serkan Aydın | Öyle | Geçti |
 | (25.11) Teknisyen sorumlu atar, geciken filtresi | Sorumlu kartta, vitrinde geciken etiket "N gün gecikti" | Öyle (ekran: `etiket-ata.png`, `etiketler-geciken.png`) | Geçti |
 | Güvenlik taraması | Temiz | Temiz | Geçti |
-| Gerçek telefonda QR okutma | Kart açılır | **[doğrulanacak: kurulumdan sonra, Android ve iPhone]** | Bekliyor |
+| Gerçek telefonda QR okutma | Kart açılır | 26.11.2026 Android: kart açıldı | Geçti (Android) |
+| Vardiya kontrolü ve kırmızı etiket (fotoğrafsız), deneme alanı | Kayıt açılır | 26.11.2026 Android: kontrol girildi, kırmızı etiket açıldı | Geçti (Android) |
+| Etikete fotoğraf ekleme | Fotoğraf etiket detayında görünür | **[doğrulanacak: Android]** | Bekliyor |
+| iPhone (Safari): QR, kontrol, fotoğraf | Aynı | **Denenmedi: iPhone yok.** Risk en çok fotoğrafta (kamera izni, HEIC biçimi) | Açık |
 
 **Burada bir test daha yapalım:** QR'ı gerçek telefon kamerasıyla okut. Fotoğraf çekmeyi Android ve iPhone'da dene (`capture=environment` davranışı tarayıcıya göre değişir). Kurum alanında bir kırmızı etiketin Arıza Defteri'nde gerçekten açıldığını gör.
 
 ## 8. Bilinen sınırlar ve sonraki adımlar
+
+- **iPhone'da denenmedi (26.11.2026).** Android'de QR, kontrol ve etiket geçti. iPhone'da birine `#/e/FL-01` QR'ını okutup fotoğraflı bir kırmızı etiket açtırmak 2 dakika sürer; yapılana kadar "iOS desteklenir" denmemeli.
 
 - **Kişiye özel giriş yok.** Kurum modunda şifreyi bilen herkes herkes adına kayıt açabilir. Bir pilot için yeterli, gerçek kullanım için değil. *Şöyle daha iyi olur:* V3'te Pusula'daki gibi Google/Microsoft girişi ya da kişiye özel PIN.
 - **Demo vitrini her gece silinir.** Kurum alanında yapılan gerçek denemeler de gider. Arıza Defteri'ne gönderilmiş ama kapatılmamış arıza orada açık kalır.
