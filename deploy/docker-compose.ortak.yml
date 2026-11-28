@@ -5,6 +5,7 @@
 name: nabiz
 services:
   nabiz:
+    init: true  # PID 1 olarak tini: alt süreçleri toplar (zombie birikmez), sinyalleri düzgün iletir
     build: ..
     container_name: nabiz
     env_file: ../.env
